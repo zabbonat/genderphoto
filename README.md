@@ -91,14 +91,7 @@ See `tests/test_validation_100.py` for the full dataset.
 ## Citation
 
 ```bibtex
-@article{abbonato2026genderphoto,
-  title={Gender Classification of Patent Inventors Using an Ensemble of
-         Name-Based Inference and Photo-Based Face Analysis},
-  author={Abbonato, Diletta},
-  journal={TBD},
-  year={2026},
-  doi={PLACEHOLDER}
-}
+\
 ```
 
 ## License
