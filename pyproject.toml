@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genderphoto"
+version = "0.1.0"
+description = "Gender classification of patent inventors using name-based inference + photo-based face analysis + VLM fallback"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Diletta Abbonato", email = "diletta.abbonato@unito.it"},
+]
+keywords = ["gender", "patents", "inventors", "face-recognition", "deepface", "bibliometrics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "pandas>=1.5",
+    "numpy>=1.21",
+    "Pillow>=9.0",
+    "requests>=2.28",
+    "deepface>=0.0.89",
+    "retina-face>=0.0.13",
+    "icrawler>=0.6.6",
+    "gender-guesser>=0.4.0",
+]
+
+[project.optional-dependencies]
+vlm = ["ollama>=0.1.0"]
+dev = ["pytest>=7.0", "pytest-cov"]
+
+[project.urls]
+Homepage = "https://github.com/dilettaabbonato/genderphoto"
+Paper = "https://doi.org/PLACEHOLDER"
+
+[tool.setuptools.packages.find]
+where = ["src"]
