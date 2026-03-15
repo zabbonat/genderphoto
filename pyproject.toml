@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
-    {name = "Diletta Abbonato", email = "diletta.abbonato@unito.it"},
+    {name = "Diletta Abbonato", email = "diletta.abbonato@unimib.it"},
 ]
 keywords = ["gender", "patents", "inventors", "face-recognition", "deepface", "bibliometrics"]
 classifiers = [
@@ -36,7 +36,7 @@ vlm = ["ollama>=0.1.0"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.urls]
-Homepage = "https://github.com/dilettaabbonato/genderphoto"
+Homepage = "https://github.com/zabbonat/genderphoto"
 Paper = "https://doi.org/PLACEHOLDER"
 
 [tool.setuptools.packages.find]

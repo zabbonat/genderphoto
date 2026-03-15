@@ -7,13 +7,13 @@ Designed for bibliometric research on inventor gender gaps, where name-only appr
 ## Installation
 
 ```bash
-pip install genderphoto
+pip install git+https://github.com/zabbonat/genderphoto.git
 ```
 
 For development:
 
 ```bash
-git clone https://github.com/dilettaabbonato/genderphoto.git
+git clone https://github.com/zabbonat/genderphoto.git
 cd genderphoto
 pip install -e ".[dev]"
 ```
