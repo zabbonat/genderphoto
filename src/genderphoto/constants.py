@@ -25,3 +25,24 @@ DEFAULT_SLEEP = 2.5
 
 # Default confidence threshold for accepting a photo classification
 DEFAULT_CONFIDENCE_THRESHOLD = 75.0
+
+# Known vision-capable model name patterns (for Ollama auto-detection)
+VISION_MODEL_PATTERNS = [
+    'qwen2.5vl', 'qwen2-vl', 'qwenvl',
+    'llava', 'bakllava',
+    'minicpm-v', 'minicpm_v',
+    'moondream',
+    'llama3.2-vision', 'llama-vision',
+    'internvl', 'cogvlm',
+]
+
+# Suggested VLM models (for documentation / user guidance)
+SUGGESTED_VLM_MODELS = [
+    'qwen2.5vl:7b',      # Default – good balance of speed and accuracy
+    'qwen2.5vl:3b',      # Faster, slightly less accurate
+    'qwen2.5vl:72b',     # Most accurate, requires significant GPU RAM
+    'llava:7b',           # Alternative VLM
+    'llava:13b',          # Larger LLaVA
+    'minicpm-v:8b',       # MiniCPM-V
+    'moondream:1.8b',     # Lightweight, very fast
+]

@@ -19,9 +19,16 @@ def classify_batch(*args, **kwargs):
     return _cb(*args, **kwargs)
 
 
+def list_available_vlm_models(*args, **kwargs):
+    """Lazy-loaded wrapper for vlm_classifier.list_available_vlm_models."""
+    from genderphoto.vlm_classifier import list_available_vlm_models as _lm
+    return _lm(*args, **kwargs)
+
+
 __all__ = [
     "classify_name",
     "classify_inventor",
     "classify_batch",
+    "list_available_vlm_models",
     "__version__",
 ]

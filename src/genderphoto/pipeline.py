@@ -35,6 +35,7 @@ def classify_inventor(
     photo_dir: str = './inventor_photos',
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
+    verbose: bool = False,
 ) -> dict:
     """
     Full classification pipeline for a single inventor.
@@ -56,9 +57,12 @@ def classify_inventor(
     photo_dir : str
         Directory for saved photos.
     vlm_model : str
-        Ollama VLM model name.
+        Ollama VLM model name (e.g. 'qwen2.5vl:7b', 'llava:7b').
     ollama_url : str
         Ollama API endpoint URL.
+    verbose : bool
+        If True, show detailed step-by-step logging.
+        If False (default), suppress log output (silent mode).
 
     Returns
     -------
@@ -75,75 +79,85 @@ def classify_inventor(
             'error': str | None,
         }
     """
-    first_name = extract_first_name(name)
-
-    # Stage 1: name-based classification
-    name_result = classify_name(first_name, country_code)
-
-    base = {
-        'inventor_name': name,
-        'gender': name_result['gender'] or 'UNKNOWN',
-        'confidence': None,
-        'method': name_result['method'],
-        'is_ambiguous': name_result['is_ambiguous'],
-        'gender_raw': name_result['gender_raw'],
-        'ambiguity_reason': name_result['ambiguity_reason'],
-        'photo_url': None,
-        'photo_saved_path': None,
-        'images_tried': 0,
-        'error': None,
-    }
-
-    # If name is unambiguous, return immediately
-    if not name_result['is_ambiguous'] and name_result['gender'] is not None:
-        log.info(
-            "%s -> %s (name_based, %s)",
-            name, name_result['gender'], name_result['gender_raw'],
-        )
-        return base
-
-    # Stage 2: photo-based classification
-    log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
+    # Control logging verbosity
+    gp_logger = logging.getLogger('genderphoto')
+    _prev_level = gp_logger.level
+    if not verbose:
+        gp_logger.setLevel(logging.WARNING)
 
     try:
-        photos = search_photos(name, affiliation, max_images)
-    except Exception as e:
-        log.warning("Photo search error for %s: %s", name, e)
-        base['error'] = f'photo_search_error: {str(e)[:100]}'
-        return base
+        first_name = extract_first_name(name)
 
-    if not photos:
-        base['error'] = 'no_images_found'
-        log.warning("  No images for %s", name)
-        return base
+        # Stage 1: name-based classification
+        name_result = classify_name(first_name, country_code)
 
-    # Stage 3: ensemble classification
-    result, tried, best_img = run_ensemble(
-        photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
-    )
-    photo_meta = result.pop('_photo', {})
-    base['images_tried'] = tried
+        base = {
+            'inventor_name': name,
+            'gender': name_result['gender'] or 'UNKNOWN',
+            'confidence': None,
+            'method': name_result['method'],
+            'is_ambiguous': name_result['is_ambiguous'],
+            'gender_raw': name_result['gender_raw'],
+            'ambiguity_reason': name_result['ambiguity_reason'],
+            'photo_url': None,
+            'photo_saved_path': None,
+            'images_tried': 0,
+            'error': None,
+        }
 
-    if result.get('gender') and (result.get('confidence') or 0) >= confidence_threshold:
-        saved = None
-        if save_photo_flag and best_img:
-            saved = save_photo(best_img, name, photo_dir)
+        # If name is unambiguous, return immediately
+        if not name_result['is_ambiguous'] and name_result['gender'] is not None:
+            log.info(
+                "%s -> %s (name_based, %s)",
+                name, name_result['gender'], name_result['gender_raw'],
+            )
+            return base
 
-        base['gender'] = result['gender']
-        base['confidence'] = result['confidence']
-        base['method'] = result.get('classifier', 'photo')
-        base['photo_url'] = photo_meta.get('url', '')
-        base['photo_saved_path'] = saved
-        base['error'] = result.get('error')
-        log.info(
-            "  -> %s (%s%%, %s, %d imgs)",
-            result['gender'], result['confidence'],
-            result.get('classifier'), tried,
+        # Stage 2: photo-based classification
+        log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
+
+        try:
+            photos = search_photos(name, affiliation, max_images)
+        except Exception as e:
+            log.warning("Photo search error for %s: %s", name, e)
+            base['error'] = f'photo_search_error: {str(e)[:100]}'
+            return base
+
+        if not photos:
+            base['error'] = 'no_images_found'
+            log.warning("  No images for %s", name)
+            return base
+
+        # Stage 3: ensemble classification
+        result, tried, best_img = run_ensemble(
+            photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
         )
-    else:
-        base['gender'] = 'UNKNOWN'
-        base['method'] = 'unresolved'
-        base['error'] = result.get('error', 'no_confident_classification')
-        log.warning("  Could not classify %s (%d imgs)", name, tried)
+        photo_meta = result.pop('_photo', {})
+        base['images_tried'] = tried
 
-    return base
+        if result.get('gender') and (result.get('confidence') or 0) >= confidence_threshold:
+            saved = None
+            if save_photo_flag and best_img:
+                saved = save_photo(best_img, name, photo_dir)
+
+            base['gender'] = result['gender']
+            base['confidence'] = result['confidence']
+            base['method'] = result.get('classifier', 'photo')
+            base['photo_url'] = photo_meta.get('url', '')
+            base['photo_saved_path'] = saved
+            base['error'] = result.get('error')
+            log.info(
+                "  -> %s (%s%%, %s, %d imgs)",
+                result['gender'], result['confidence'],
+                result.get('classifier'), tried,
+            )
+        else:
+            base['gender'] = 'UNKNOWN'
+            base['method'] = 'unresolved'
+            base['error'] = result.get('error', 'no_confident_classification')
+            log.warning("  Could not classify %s (%d imgs)", name, tried)
+
+        return base
+
+    finally:
+        gp_logger.setLevel(_prev_level)

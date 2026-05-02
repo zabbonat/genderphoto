@@ -117,3 +117,63 @@ def classify_vlm(
             'n_faces': 0, 'classifier': f'vlm_{model}',
             'error': str(e)[:100],
         }
+
+
+def list_available_vlm_models(ollama_url: str = OLLAMA_URL) -> list[dict]:
+    """
+    Query Ollama for installed models and identify vision-capable ones.
+
+    Parameters
+    ----------
+    ollama_url : str
+        Ollama API endpoint URL. The '/api/tags' endpoint is used.
+
+    Returns
+    -------
+    list[dict]
+        Each dict: {'name': str, 'size_gb': float, 'is_vision': bool}.
+        Vision models are sorted first, then alphabetically.
+        Returns empty list if Ollama is not running.
+
+    Example
+    -------
+    >>> from genderphoto.vlm_classifier import list_available_vlm_models
+    >>> models = list_available_vlm_models()
+    >>> vision = [m for m in models if m['is_vision']]
+    >>> print(vision)
+    [{'name': 'qwen2.5vl:7b', 'size_gb': 4.7, 'is_vision': True}]
+    """
+    from genderphoto.constants import VISION_MODEL_PATTERNS
+
+    # Derive the base URL from the generate endpoint
+    base_url = ollama_url.replace('/api/generate', '')
+    tags_url = f"{base_url}/api/tags"
+
+    try:
+        resp = requests.get(tags_url, timeout=5)
+        resp.raise_for_status()
+        models = resp.json().get('models', [])
+    except requests.ConnectionError:
+        log.warning("Ollama not running at %s", base_url)
+        return []
+    except Exception as e:
+        log.warning("Error querying Ollama models: %s", e)
+        return []
+
+    result = []
+    for m in models:
+        name = m.get('name', '')
+        name_lower = name.lower()
+        is_vision = any(p in name_lower for p in VISION_MODEL_PATTERNS)
+        size_bytes = m.get('size', 0)
+        size_gb = round(size_bytes / (1024**3), 1) if size_bytes else None
+
+        result.append({
+            'name': name,
+            'size_gb': size_gb,
+            'is_vision': is_vision,
+        })
+
+    # Vision models first, then alphabetically
+    result.sort(key=lambda x: (not x['is_vision'], x['name']))
+    return result

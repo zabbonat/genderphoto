@@ -29,6 +29,7 @@ dependencies = [
     "retina-face>=0.0.13",
     "icrawler>=0.6.6",
     "gender-guesser>=0.4.0",
+    "tqdm>=4.60",
 ]
 
 [project.optional-dependencies]
