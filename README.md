@@ -12,6 +12,9 @@ No data ever leaves your machine — the VLM runs entirely on localhost.
 pip install git+https://github.com/zabbonat/genderphoto.git
 ```
 
+> [!IMPORTANT]
+> **Python version:** We strongly recommend using **Python 3.9, 3.10, or 3.11**. Python 3.12+ might have compatibility issues with `tensorflow` and `deepface`. A virtual environment (like `conda` or `venv`) is highly recommended to avoid dependency conflicts with other machine learning libraries.
+
 Development install (editable, with test dependencies):
 
 ```bash
