@@ -316,7 +316,7 @@ If you use this software, please cite it:
 
 ```bibtex
 @software{genderphoto,
-  author = {Abbonato, Diletta},
+  author = {Abbonato, Diletta; Maronero, Cecilia},
   title  = {genderphoto: Gender classification of patent inventors using name + photo + VLM ensemble},
   year   = {2025},
   url    = {https://github.com/zabbonat/genderphoto}
