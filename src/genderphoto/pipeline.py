@@ -129,7 +129,7 @@ def classify_inventor(
         log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
 
         try:
-            photos = search_photos(name, affiliation, max_images)
+            photos = search_photos(name, affiliation, max_images, search_engine=search_engine)
         except Exception as e:
             log.warning("Photo search error for %s: %s", name, e)
             base['error'] = f'photo_search_error: {str(e)[:100]}'
