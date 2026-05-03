@@ -158,8 +158,8 @@ The batch function first runs name-based classification on every row. Only the a
 | Column | Description |
 |--------|-------------|
 | `gender_name` | Name-based classification (`'M'`, `'F'`, or None) |
-| `gender_name_raw` | Raw global-gender-predictor output |
-| `name_probability` | Raw probability score from global-gender-predictor |
+| `gender_name_raw` | Raw `global-gender-predictor` output (`Male`, `Female`, `Unknown`) |
+| `name_probability` | Probability score from WGND 2.0 (e.g., 0.85) |
 | `is_ambiguous` | Whether photo pipeline was needed |
 | `ambiguity_reason` | Reason for ambiguity flag |
 | `gender_photo` | Photo-based classification (None if not needed) |
@@ -318,12 +318,27 @@ Optional: `ollama` (Python client, for VLM support).
 
 ## Citation
 
+If you use this software, please cite it:
+
 ```bibtex
 @software{genderphoto,
   author = {Abbonato, Diletta},
   title  = {genderphoto: Gender classification of patent inventors using name + photo + VLM ensemble},
   year   = {2025},
   url    = {https://github.com/zabbonat/genderphoto}
+}
+```
+
+The name classification relies on the World Gender Name Dictionary (WGND 2.0). If your work benefits from the name-based stage, please also cite the WGND dataset:
+
+```bibtex
+@data{DVN/MSEGSJ_2021,
+  author = {Raffo, Julio},
+  publisher = {Harvard Dataverse},
+  title = {{WGND 2.0}},
+  year = {2021},
+  doi = {10.7910/DVN/MSEGSJ},
+  url = {https://doi.org/10.7910/DVN/MSEGSJ}
 }
 ```
 
