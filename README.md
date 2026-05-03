@@ -72,7 +72,7 @@ Each inventor goes through up to four stages. The pipeline stops as soon as one 
 
 1. **Name-based classification** — uses `global-gender-predictor` (backed by the WGND 2.0 dataset with 4.1M names) to resolve unambiguous names instantly. Names with a predicted probability below the `name_threshold` (default 0.75) are flagged as ambiguous. Italian male names (Andrea, Simone, Nicola, …) used outside Italy are also flagged.
 
-2. **Photo search** — For ambiguous names, Bing image search (via `icrawler`) downloads up to `max_images` photos. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, stopping at the first query that returns results.
+2. **Photo search** — For ambiguous names, Bing image search (via `icrawler`) or DuckDuckGo (via `ddgs`) downloads up to `max_images` photos. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, stopping at the first query that returns results.
 
 3. **DeepFace consensus** — DeepFace (`retinaface` backend, `enforce_detection=True`) runs on every downloaded photo. If all images agree on the same gender with an average confidence ≥ 90%, the result is accepted without calling the VLM.
 
@@ -95,6 +95,7 @@ result = classify_inventor(
     confidence_threshold=75.0,        # minimum confidence % to accept (default: 75.0)
     save_photo_flag=False,            # save the best photo to disk (default: False)
     photo_dir="./inventor_photos",    # where to save photos
+    search_engine="bing",             # 'bing' or 'duckduckgo' (default: 'bing')
     vlm_model="qwen2.5vl:7b",        # any Ollama vision model (see below)
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
     verbose=False,                    # True for step-by-step log output (default: False)
@@ -136,6 +137,7 @@ result_df = classify_batch(
     sleep=2.5,                         # seconds between inventors, for rate limiting (default: 2.5)
     save_photos=True,                  # save best photos to disk (default: True)
     photo_dir="./inventor_photos",     # photo output directory
+    search_engine="bing",              # 'bing' or 'duckduckgo'
     vlm_model="qwen2.5vl:7b",         # Ollama vision model
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
     checkpoint_path="./checkpoint.csv",  # auto-save partial results (default: None)
@@ -306,7 +308,7 @@ The full validation dataset is in `tests/test_validation_100.py`.
 
 ## Dependencies
 
-Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `global-gender-predictor`, `tqdm`.
+Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `global-gender-predictor`, `ddgs`, `tqdm`.
 
 (The VLM fallback connects to the local Ollama API via HTTP requests, so no additional Python packages are required, only the Ollama application itself).
 

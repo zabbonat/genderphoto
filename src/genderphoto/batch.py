@@ -20,6 +20,7 @@ from genderphoto.constants import (
     DEFAULT_SLEEP,
     DEFAULT_VLM,
     OLLAMA_URL,
+    DEFAULT_SEARCH_ENGINE,
 )
 from genderphoto.pipeline import classify_inventor
 from genderphoto.utils import extract_first_name
@@ -43,6 +44,7 @@ def classify_batch(
     checkpoint_every: int = 10,
     verbose: bool = False,
     name_threshold: float = None,
+    search_engine: str = DEFAULT_SEARCH_ENGINE,
 ) -> pd.DataFrame:
     """
     Process a DataFrame of inventors, adding gender classification columns.
@@ -83,6 +85,8 @@ def classify_batch(
         If False (default), show only a progress bar.
     name_threshold : float, optional
         Probability threshold for name-based classification.
+    search_engine : str
+        'bing' (default) or 'duckduckgo'.
 
     Returns
     -------
@@ -187,6 +191,7 @@ def classify_batch(
                 ollama_url=ollama_url,
                 verbose=verbose,
                 name_threshold=name_threshold,
+                search_engine=search_engine,
             )
 
             df.at[idx, 'gender_photo'] = result['gender'] if result['gender'] != 'UNKNOWN' else None

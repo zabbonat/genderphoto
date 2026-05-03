@@ -16,6 +16,7 @@ from genderphoto.constants import (
     DEFAULT_MAX_IMAGES,
     DEFAULT_VLM,
     OLLAMA_URL,
+    DEFAULT_SEARCH_ENGINE,
 )
 from genderphoto.ensemble import run_ensemble
 from genderphoto.name_classifier import classify_name
@@ -37,6 +38,7 @@ def classify_inventor(
     ollama_url: str = OLLAMA_URL,
     verbose: bool = False,
     name_threshold: float = None,
+    search_engine: str = DEFAULT_SEARCH_ENGINE,
 ) -> dict:
     """
     Full classification pipeline for a single inventor.
@@ -66,6 +68,8 @@ def classify_inventor(
         If False (default), suppress log output (silent mode).
     name_threshold : float, optional
         Probability threshold for name-based classification.
+    search_engine : str
+        'bing' (default) or 'duckduckgo'.
 
     Returns
     -------

@@ -15,7 +15,9 @@ import shutil
 import tempfile
 import time
 
-from genderphoto.constants import DEFAULT_MAX_IMAGES
+import requests
+
+from genderphoto.constants import DEFAULT_MAX_IMAGES, DEFAULT_SEARCH_ENGINE
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +39,10 @@ def search_photos(
     affiliation: str = None,
     max_images: int = DEFAULT_MAX_IMAGES,
     sleep: float = 1.0,
+    search_engine: str = DEFAULT_SEARCH_ENGINE,
 ) -> list[dict]:
     """
-    Search for photos of a person using Bing image search.
+    Search for photos of a person using Bing or DuckDuckGo image search.
 
     Strategy (tiered, stops at first success):
       1. "{name} {affiliation}" (institutional)
@@ -56,6 +59,8 @@ def search_photos(
         Maximum images to download per query.
     sleep : float
         Sleep between queries (seconds).
+    search_engine : str
+        'bing' (default) or 'duckduckgo'.
 
     Returns
     -------
@@ -70,42 +75,89 @@ def search_photos(
     queries.append((f'{name}', 'name_only'))
 
     results = []
-    from icrawler.builtin import BingImageCrawler
-    for rank, (query, query_type) in enumerate(queries):
-        tmp_dir = tempfile.mkdtemp(prefix='inv_photo_')
-        try:
-            crawler = BingImageCrawler(
-                storage={'root_dir': tmp_dir},
-                log_level=logging.WARNING,
-            )
-            crawler.crawl(
-                keyword=query,
-                max_num=max_images,
-                min_size=(100, 100),
-                file_idx_offset=0,
-            )
-            for fpath in glob.glob(os.path.join(tmp_dir, '*')):
-                results.append({
-                    'url': fpath,
-                    'query': query,
-                    'query_type': query_type,
-                    'query_rank': rank,
-                })
-            if results:
-                # Keep dir alive until process exit (images are local paths)
-                _temp_dirs.append(tmp_dir)
-                log.info(
-                    "Found %d images for '%s' via %s",
-                    len(results), name, query_type,
-                )
-                return results
-            else:
-                # No results from this query, clean up immediately
+    
+    if search_engine.lower() == 'duckduckgo':
+        from ddgs import DDGS
+        for rank, (query, query_type) in enumerate(queries):
+            tmp_dir = tempfile.mkdtemp(prefix='inv_photo_ddg_')
+            try:
+                with DDGS() as ddgs:
+                    ddg_results = list(ddgs.images(query, max_results=max_images))
+                
+                # Download URLs
+                for idx, r in enumerate(ddg_results):
+                    img_url = r.get('image')
+                    if not img_url:
+                        continue
+                    try:
+                        resp = requests.get(img_url, timeout=5, stream=True)
+                        resp.raise_for_status()
+                        ext = img_url.split('.')[-1][:4].lower()
+                        if ext not in ['jpg', 'jpeg', 'png', 'webp']:
+                            ext = 'jpg'
+                        fpath = os.path.join(tmp_dir, f"{idx:06d}.{ext}")
+                        with open(fpath, 'wb') as f:
+                            for chunk in resp.iter_content(chunk_size=8192):
+                                f.write(chunk)
+                    except Exception as e:
+                        log.debug("Failed to download DDG image %s: %s", img_url, e)
+                
+                for fpath in glob.glob(os.path.join(tmp_dir, '*')):
+                    results.append({
+                        'url': fpath,
+                        'query': query,
+                        'query_type': query_type,
+                        'query_rank': rank,
+                    })
+                    
+                if results:
+                    _temp_dirs.append(tmp_dir)
+                    log.info("Found %d images for '%s' via DDG %s", len(results), name, query_type)
+                    return results
+                else:
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception as e:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception as e:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            log.warning("Search failed for '%s': %s", query, e)
-        time.sleep(sleep)
+                log.warning("DDG search failed for '%s': %s", query, e)
+            time.sleep(sleep)
+            
+    else:  # bing
+        from icrawler.builtin import BingImageCrawler
+        for rank, (query, query_type) in enumerate(queries):
+            tmp_dir = tempfile.mkdtemp(prefix='inv_photo_')
+            try:
+                crawler = BingImageCrawler(
+                    storage={'root_dir': tmp_dir},
+                    log_level=logging.WARNING,
+                )
+                crawler.crawl(
+                    keyword=query,
+                    max_num=max_images,
+                    min_size=(100, 100),
+                    file_idx_offset=0,
+                )
+                for fpath in glob.glob(os.path.join(tmp_dir, '*')):
+                    results.append({
+                        'url': fpath,
+                        'query': query,
+                        'query_type': query_type,
+                        'query_rank': rank,
+                    })
+                if results:
+                    # Keep dir alive until process exit (images are local paths)
+                    _temp_dirs.append(tmp_dir)
+                    log.info(
+                        "Found %d images for '%s' via %s",
+                        len(results), name, query_type,
+                    )
+                    return results
+                else:
+                    # No results from this query, clean up immediately
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception as e:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                log.warning("Search failed for '%s': %s", query, e)
+            time.sleep(sleep)
 
     log.warning("No images found for '%s'", name)
     return []
