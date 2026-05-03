@@ -26,6 +26,9 @@ DEFAULT_SLEEP = 2.5
 # Default confidence threshold for accepting a photo classification
 DEFAULT_CONFIDENCE_THRESHOLD = 75.0
 
+# Default probability threshold for accepting a name classification
+DEFAULT_NAME_THRESHOLD = 0.75
+
 # Known vision-capable model name patterns (for Ollama auto-detection)
 VISION_MODEL_PATTERNS = [
     'qwen2.5vl', 'qwen2-vl', 'qwenvl',

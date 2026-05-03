@@ -42,6 +42,7 @@ def classify_batch(
     checkpoint_path: str = None,
     checkpoint_every: int = 10,
     verbose: bool = False,
+    name_threshold: float = None,
 ) -> pd.DataFrame:
     """
     Process a DataFrame of inventors, adding gender classification columns.
@@ -80,12 +81,15 @@ def classify_batch(
     verbose : bool
         If True, show detailed step-by-step logging for each inventor.
         If False (default), show only a progress bar.
+    name_threshold : float, optional
+        Probability threshold for name-based classification.
 
     Returns
     -------
     pd.DataFrame
         Input DataFrame with added columns: gender_name, gender_photo,
-        gender_final, gender_method, photo_confidence, is_ambiguous, etc.
+        gender_final, gender_method, name_probability, photo_confidence, 
+        is_ambiguous, etc.
     """
     from tqdm import tqdm
 
@@ -106,16 +110,21 @@ def classify_batch(
         from genderphoto.name_classifier import classify_name
 
         name_results = []
+        kwargs = {}
+        if name_threshold is not None:
+            kwargs['threshold'] = name_threshold
+            
         for _, row in df.iterrows():
             full_name = row[name_col]
             first_name = extract_first_name(full_name)
             country = row.get(country_col) if country_col in df.columns else None
-            nr = classify_name(first_name, country)
+            nr = classify_name(first_name, country, **kwargs)
             name_results.append(nr)
 
         name_df = pd.DataFrame(name_results)
         df['gender_name'] = name_df['gender'].values
         df['gender_name_raw'] = name_df['gender_raw'].values
+        df['name_probability'] = name_df['name_probability'].values
         df['is_ambiguous'] = name_df['is_ambiguous'].values
         df['ambiguity_reason'] = name_df['ambiguity_reason'].values
 
@@ -177,6 +186,7 @@ def classify_batch(
                 vlm_model=vlm_model,
                 ollama_url=ollama_url,
                 verbose=verbose,
+                name_threshold=name_threshold,
             )
 
             df.at[idx, 'gender_photo'] = result['gender'] if result['gender'] != 'UNKNOWN' else None

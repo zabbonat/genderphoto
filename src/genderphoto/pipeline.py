@@ -36,6 +36,7 @@ def classify_inventor(
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
     verbose: bool = False,
+    name_threshold: float = None,
 ) -> dict:
     """
     Full classification pipeline for a single inventor.
@@ -63,6 +64,8 @@ def classify_inventor(
     verbose : bool
         If True, show detailed step-by-step logging.
         If False (default), suppress log output (silent mode).
+    name_threshold : float, optional
+        Probability threshold for name-based classification.
 
     Returns
     -------
@@ -71,6 +74,7 @@ def classify_inventor(
             'inventor_name': str,
             'gender': 'M' | 'F' | 'UNKNOWN',
             'confidence': float | None,
+            'name_probability': float | None,
             'method': str,
             'is_ambiguous': bool,
             'photo_url': str | None,
@@ -89,12 +93,16 @@ def classify_inventor(
         first_name = extract_first_name(name)
 
         # Stage 1: name-based classification
-        name_result = classify_name(first_name, country_code)
+        kwargs = {}
+        if name_threshold is not None:
+            kwargs['threshold'] = name_threshold
+        name_result = classify_name(first_name, country_code, **kwargs)
 
         base = {
             'inventor_name': name,
             'gender': name_result['gender'] or 'UNKNOWN',
             'confidence': None,
+            'name_probability': name_result.get('name_probability'),
             'method': name_result['method'],
             'is_ambiguous': name_result['is_ambiguous'],
             'gender_raw': name_result['gender_raw'],

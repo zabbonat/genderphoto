@@ -28,7 +28,7 @@ dependencies = [
     "deepface>=0.0.89",
     "retina-face>=0.0.13",
     "icrawler>=0.6.6",
-    "gender-guesser>=0.4.0",
+    "global-gender-predictor>=0.0.5",
     "tqdm>=4.60",
 ]
 

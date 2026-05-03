@@ -2,7 +2,7 @@
 
 Gender classification of patent inventors (or any person) from their name, publicly available photos, and — when needed — a local vision-language model.
 
-The package was developed for bibliometric research on inventor gender gaps, where relying on names alone fails systematically: "Andrea" is male in Italy and female in the US, most East-Asian given names are unisex to `gender_guesser`, and so on. Rather than discarding these cases, `genderphoto` downloads photos via Bing, runs DeepFace on every image it finds, and calls a local VLM through Ollama when DeepFace results disagree or are uncertain.
+The package was developed for bibliometric research on inventor gender gaps, where relying on names alone fails systematically: "Andrea" is male in Italy and female in the US, most East-Asian given names are unisex to name classifiers, and so on. Rather than discarding these cases, `genderphoto` downloads photos via Bing, runs DeepFace on every image it finds, and calls a local VLM through Ollama when DeepFace results disagree or are uncertain.
 
 No data ever leaves your machine — the VLM runs entirely on localhost.
 
@@ -76,7 +76,7 @@ classify_name("Wei", "CN")      # → {'gender': None, 'is_ambiguous': True, ...
 
 Each inventor goes through up to four stages. The pipeline stops as soon as one stage produces a confident result.
 
-1. **Name-based classification** — `gender_guesser` resolves unambiguous Western names instantly. Names tagged as `andy`, `unknown`, `mostly_male`, or `mostly_female` are flagged ambiguous. Italian male names (Andrea, Simone, Nicola, …) used outside Italy are also flagged.
+1. **Name-based classification** — uses `global-gender-predictor` (backed by the WGND 2.0 dataset with 4.1M names) to resolve unambiguous names instantly. Names with a predicted probability below the `name_threshold` (default 0.75) are flagged as ambiguous. Italian male names (Andrea, Simone, Nicola, …) used outside Italy are also flagged.
 
 2. **Photo search** — For ambiguous names, Bing image search (via `icrawler`) downloads up to `max_images` photos. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, stopping at the first query that returns results.
 
@@ -104,6 +104,7 @@ result = classify_inventor(
     vlm_model="qwen2.5vl:7b",        # any Ollama vision model (see below)
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
     verbose=False,                    # True for step-by-step log output (default: False)
+    name_threshold=0.75,              # Min probability to accept name-only classification (default: 0.75)
 )
 ```
 
@@ -114,9 +115,10 @@ result = classify_inventor(
 | `inventor_name` | str | Input name |
 | `gender` | `'M'` / `'F'` / `'UNKNOWN'` | Final classification |
 | `confidence` | float or None | Confidence %, None for name-based |
+| `name_probability` | float or None | Name probability from WGND 2.0 |
 | `method` | str | Which stage resolved it (e.g. `name_based`, `deepface_consensus`, `ensemble_vlm_override`) |
 | `is_ambiguous` | bool | Whether the name was flagged ambiguous |
-| `gender_raw` | str | Raw output from gender_guesser or consensus details |
+| `gender_raw` | str | Raw output from global-gender-predictor or consensus details |
 | `ambiguity_reason` | str | Why the name was (or wasn't) considered ambiguous |
 | `photo_url` | str or None | URL/path of the photo used for classification |
 | `photo_saved_path` | str or None | Local path if `save_photo_flag=True` |
@@ -145,6 +147,7 @@ result_df = classify_batch(
     checkpoint_path="./checkpoint.csv",  # auto-save partial results (default: None)
     checkpoint_every=10,               # save checkpoint every N inventors (default: 10)
     verbose=False,                     # True for detailed per-inventor logging (default: False)
+    name_threshold=0.75,               # Min probability to accept name-only classification
 )
 ```
 
@@ -155,7 +158,8 @@ The batch function first runs name-based classification on every row. Only the a
 | Column | Description |
 |--------|-------------|
 | `gender_name` | Name-based classification (`'M'`, `'F'`, or None) |
-| `gender_name_raw` | Raw gender_guesser output |
+| `gender_name_raw` | Raw global-gender-predictor output |
+| `name_probability` | Raw probability score from global-gender-predictor |
 | `is_ambiguous` | Whether photo pipeline was needed |
 | `ambiguity_reason` | Reason for ambiguity flag |
 | `gender_photo` | Photo-based classification (None if not needed) |
@@ -187,7 +191,7 @@ result = classify_name(
 
 The `country_code` matters because Italian male names (Andrea, Simone, Nicola, Gabriele, Michele, Daniele, Raffaele, Samuele, Emanuele, Pasquale, Luca, Mattia) are classified as unambiguously male when `country_code="IT"`, but flagged ambiguous for any other country.
 
-Names classified by `gender_guesser` as `mostly_male` or `mostly_female` (e.g. Robin, Kim) are also treated as ambiguous, to avoid silent misclassifications on large datasets.
+Names classified with a probability below `name_threshold` (default 0.75) are treated as ambiguous to avoid silent misclassifications on large datasets.
 
 ---
 
@@ -308,7 +312,7 @@ The full validation dataset is in `tests/test_validation_100.py`.
 
 ## Dependencies
 
-Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `gender-guesser`, `tqdm`.
+Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `global-gender-predictor`, `tqdm`.
 
 Optional: `ollama` (Python client, for VLM support).
 
