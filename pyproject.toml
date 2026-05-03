@@ -33,7 +33,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vlm = ["ollama>=0.1.0"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.urls]

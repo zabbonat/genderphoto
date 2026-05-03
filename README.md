@@ -20,12 +20,6 @@ cd genderphoto
 pip install -e ".[dev]"
 ```
 
-If you want VLM fallback support, also install the optional `ollama` client:
-
-```bash
-pip install genderphoto[vlm]
-```
-
 ---
 
 ## Quick start
@@ -314,7 +308,7 @@ The full validation dataset is in `tests/test_validation_100.py`.
 
 Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `global-gender-predictor`, `tqdm`.
 
-Optional: `ollama` (Python client, for VLM support).
+(The VLM fallback connects to the local Ollama API via HTTP requests, so no additional Python packages are required, only the Ollama application itself).
 
 ## Citation
 
