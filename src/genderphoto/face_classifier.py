@@ -44,9 +44,12 @@ def classify_face(img: Image.Image) -> dict:
         }
     """
     try:
+        # DeepFace expects BGR format when passed a numpy array (since it uses OpenCV)
+        img_bgr = np.array(img)[:, :, ::-1]
+        
         from deepface import DeepFace
         result = DeepFace.analyze(
-            img_path=np.array(img),
+            img_path=img_bgr,
             actions=['gender'],
             enforce_detection=True,
             detector_backend='retinaface',

@@ -92,13 +92,17 @@ def search_photos(
                     try:
                         resp = requests.get(img_url, timeout=5, stream=True)
                         resp.raise_for_status()
-                        ext = img_url.split('.')[-1][:4].lower()
-                        if ext not in ['jpg', 'jpeg', 'png', 'webp']:
-                            ext = 'jpg'
-                        fpath = os.path.join(tmp_dir, f"{idx:06d}.{ext}")
-                        with open(fpath, 'wb') as f:
-                            for chunk in resp.iter_content(chunk_size=8192):
-                                f.write(chunk)
+                        
+                        # Validate and convert to RGB JPEG using PIL
+                        from PIL import Image
+                        from io import BytesIO
+                        
+                        img = Image.open(BytesIO(resp.content))
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                            
+                        fpath = os.path.join(tmp_dir, f"{idx:06d}.jpg")
+                        img.save(fpath, format='JPEG', quality=90)
                     except Exception as e:
                         log.debug("Failed to download DDG image %s: %s", img_url, e)
                 
