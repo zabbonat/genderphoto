@@ -91,14 +91,14 @@ def run_ensemble(
     confs = [r[1] for r in valid_results]
     n_M = genders.count('M')
     n_F = genders.count('F')
-    # Pick the best image for VLM fallback. Prioritize single-face images.
+    # Pick the best images for VLM fallback. Prioritize single-face images.
     def img_score(r):
         conf = r[1]
         n_faces = r[4]['n_faces']
         return conf - (100 if n_faces != 1 else 0)
     
-    best_idx = max(range(len(valid_results)), key=lambda i: img_score(valid_results[i]))
-    best_gender, best_conf, best_img, best_photo, best_raw = valid_results[best_idx]
+    sorted_results = sorted(valid_results, key=lambda r: img_score(r), reverse=True)
+    best_gender, best_conf, best_img, best_photo, best_raw = sorted_results[0]
 
     log.info(
         "    Consensus: %dxM, %dxF across %d images",
@@ -125,19 +125,46 @@ def run_ensemble(
     # === PHASE 3: Disagreement or low confidence -> VLM ===
     if n_M > 0 and n_F > 0:
         log.info(
-            "    DISAGREE (%dM vs %dF) -> asking VLM...", n_M, n_F,
+            "    DISAGREE (%dM vs %dF) -> asking VLM (up to 3 images)...", n_M, n_F,
         )
     else:
         log.info(
-            "    Low avg conf (%s%%) -> asking VLM...",
+            "    Low avg conf (%s%%) -> asking VLM (up to 3 images)...",
             round(float(np.mean(confs)), 1),
         )
 
-    vlm_result = classify_vlm(best_img, model=vlm_model, ollama_url=ollama_url)
+    vlm_votes = []
+    vlm_failed_reason = None
+    
+    for i, r in enumerate(sorted_results[:3]):
+        img = r[2]
+        log.info("    VLM checking image %d...", i + 1)
+        vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url)
+        g = vlm_res.get('gender')
+        
+        if g:
+            vlm_votes.append(g)
+            if vlm_votes.count(g) >= 2:
+                log.info("    VLM reached majority: %s (votes: %s)", g, vlm_votes)
+                break
+        else:
+            vlm_failed_reason = vlm_res.get('error', 'unknown_error')
+            if vlm_failed_reason == 'OLLAMA_NOT_RUNNING':
+                break # Don't try other images if Ollama is down
 
-    if vlm_result.get('gender') is None:
-        log.info("    VLM failed: %s", vlm_result.get('error'))
-        majority = 'M' if n_M > n_F else 'F' if n_F > n_M else None
+    vlm_M = vlm_votes.count('M')
+    vlm_F = vlm_votes.count('F')
+    
+    vlm_gender = None
+    if vlm_M > vlm_F:
+        vlm_gender = 'M'
+    elif vlm_F > vlm_M:
+        vlm_gender = 'F'
+
+    majority = 'M' if n_M > n_F else 'F' if n_F > n_M else None
+
+    if not vlm_gender:
+        log.info("    VLM failed to get majority. Reason: %s, Votes: %s", vlm_failed_reason, vlm_votes)
         if majority:
             log.info(
                 "    Fallback majority: %s (%dM vs %dF)", majority, n_M, n_F,
@@ -156,9 +183,6 @@ def run_ensemble(
         best_raw['_photo'] = best_photo
         return best_raw, images_tried, best_img
 
-    vlm_gender = vlm_result['gender']
-    majority = 'M' if n_M > n_F else 'F' if n_F > n_M else None
-
     if majority and vlm_gender == majority:
         log.info(
             "    VLM (%s) agrees with majority (%dM vs %dF) -> CONFIRMED",
@@ -166,7 +190,7 @@ def run_ensemble(
         )
         return {
             'gender': vlm_gender,
-            'gender_raw': f'vlm={vlm_result.get("gender_raw")}, majority={n_M}M_{n_F}F',
+            'gender_raw': f'vlm={vlm_votes}, majority={n_M}M_{n_F}F',
             'confidence': 92.0,
             'face_detected': True,
             'n_faces': 1,
@@ -176,12 +200,12 @@ def run_ensemble(
         }, images_tried, best_img
 
     log.info(
-        "    VLM=%s vs DeepFace=%dM/%dF -> trusting VLM",
-        vlm_gender, n_M, n_F,
+        "    VLM=%s (votes: %s) vs DeepFace=%dM/%dF -> trusting VLM",
+        vlm_gender, vlm_votes, n_M, n_F,
     )
     return {
         'gender': vlm_gender,
-        'gender_raw': f'OVERRIDE: vlm={vlm_result.get("gender_raw")}, df={n_M}M_{n_F}F',
+        'gender_raw': f'OVERRIDE: vlm={vlm_votes}, df={n_M}M_{n_F}F',
         'confidence': 95.0,
         'face_detected': True,
         'n_faces': 1,
