@@ -99,6 +99,10 @@ def classify_batch(
 
     df = df.copy()
     n_total = len(df)
+    
+    # Save original index to handle duplicate indices safely, then reset
+    orig_index = df.index
+    df = df.reset_index(drop=True)
 
     # Control logging verbosity
     gp_logger = logging.getLogger('genderphoto')
@@ -249,6 +253,7 @@ def classify_batch(
         else:
             tqdm.write(f"✓ Complete: {n_classified}/{n_total} classified")
 
+        df.index = orig_index
         return df
 
     finally:
