@@ -44,17 +44,31 @@ def classify_face(img: Image.Image) -> dict:
         }
     """
     try:
-        # DeepFace expects BGR format when passed a numpy array (since it uses OpenCV)
-        img_bgr = np.array(img)[:, :, ::-1]
+        import tempfile
+        import os
         
-        from deepface import DeepFace
-        result = DeepFace.analyze(
-            img_path=img_bgr,
-            actions=['gender'],
-            enforce_detection=True,
-            detector_backend='retinaface',
-            silent=True,
-        )
+        # DeepFace is most reliable when passed a file path instead of a numpy array.
+        # We save the PIL image to a temporary file and pass that path.
+        fd, temp_path = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd)
+        try:
+            img.save(temp_path, format='JPEG', quality=95)
+            
+            import sys
+            if hasattr(sys.stdout, 'reconfigure'):
+                sys.stdout.reconfigure(encoding='utf-8')
+                
+            from deepface import DeepFace
+            result = DeepFace.analyze(
+                img_path=temp_path,
+                actions=['gender'],
+                enforce_detection=True,
+                detector_backend='retinaface',
+                silent=True,
+            )
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
         faces = result if isinstance(result, list) else [result]
         n_faces = len(faces)
 
