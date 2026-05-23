@@ -15,7 +15,6 @@ from PIL import Image
 log = logging.getLogger(__name__)
 
 
-def classify_face(img: Image.Image) -> dict:
 def classify_face(img: Image.Image, detector_backend: str = 'retinaface') -> dict:
     """
     Classify gender from a single face image using DeepFace.
