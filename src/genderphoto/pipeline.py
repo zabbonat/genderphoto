@@ -39,6 +39,7 @@ def classify_inventor(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
+    detector_backend: str = 'retinaface',
 ) -> dict:
     """
     Full classification pipeline for a single inventor.
@@ -70,6 +71,8 @@ def classify_inventor(
         Probability threshold for name-based classification.
     search_engine : str
         'bing' (default) or 'duckduckgo'.
+    detector_backend : str
+        Face detector backend ('retinaface', 'opencv', etc.).
 
     Returns
     -------
@@ -143,6 +146,7 @@ def classify_inventor(
         # Stage 3: ensemble classification
         result, tried, best_img = run_ensemble(
             photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
+            detector_backend=detector_backend
         )
         photo_meta = result.pop('_photo', {})
         base['images_tried'] = tried

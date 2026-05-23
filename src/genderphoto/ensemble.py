@@ -31,6 +31,7 @@ def run_ensemble(
     max_images: int = 5,
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
+    detector_backend: str = 'retinaface',
 ) -> tuple[dict, int, Image.Image | None]:
     """
     Run the ensemble classifier on a set of photos.
@@ -45,6 +46,8 @@ def run_ensemble(
         Ollama VLM model name for fallback.
     ollama_url : str
         Ollama API endpoint URL.
+    detector_backend : str
+        Face detector backend ('retinaface', 'opencv', etc.).
 
     Returns
     -------
@@ -63,7 +66,7 @@ def run_ensemble(
             continue
         images_tried += 1
 
-        result = classify_face(img)
+        result = classify_face(img, detector_backend=detector_backend)
         if not result['face_detected'] or result['gender'] is None:
             log.info(
                 "    Img %d: %s", images_tried, result.get('error', 'skip'),

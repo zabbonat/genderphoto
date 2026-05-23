@@ -45,6 +45,7 @@ def classify_batch(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
+    detector_backend: str = 'retinaface',
 ) -> pd.DataFrame:
     """
     Process a DataFrame of inventors, adding gender classification columns.
@@ -87,6 +88,8 @@ def classify_batch(
         Probability threshold for name-based classification.
     search_engine : str
         'bing' (default) or 'duckduckgo'.
+    detector_backend : str
+        Face detector backend ('retinaface', 'opencv', etc.).
 
     Returns
     -------
@@ -196,6 +199,7 @@ def classify_batch(
                 verbose=verbose,
                 name_threshold=name_threshold,
                 search_engine=search_engine,
+                detector_backend=detector_backend,
             )
 
             df.at[idx, 'gender_photo'] = result['gender'] if result['gender'] != 'UNKNOWN' else None

@@ -16,29 +16,25 @@ log = logging.getLogger(__name__)
 
 
 def classify_face(img: Image.Image) -> dict:
+def classify_face(img: Image.Image, detector_backend: str = 'retinaface') -> dict:
     """
-    Classify gender from a photo using DeepFace.
-
-    Handles:
-    - Single face: return classification
-    - Multi-face, same gender: accept (e.g., group of all men)
-    - Multi-face, mixed genders: skip (ambiguous group photo)
-    - No face detected: skip
+    Classify gender from a single face image using DeepFace.
 
     Parameters
     ----------
     img : PIL.Image.Image
         RGB image to analyze.
+    detector_backend : str
+        Face detector backend ('retinaface', 'opencv', 'ssd', 'mtcnn', etc.).
 
     Returns
     -------
     dict
         {
             'gender': 'M' | 'F' | None,
-            'gender_raw': str,
             'confidence': float | None,
-            'n_faces': int,
             'face_detected': bool,
+            'n_faces': int,
             'classifier': str,
             'error': str | None,
         }
@@ -63,7 +59,7 @@ def classify_face(img: Image.Image) -> dict:
                 img_path=temp_path,
                 actions=['gender'],
                 enforce_detection=True,
-                detector_backend='retinaface',
+                detector_backend=detector_backend,
                 silent=True,
             )
         finally:
