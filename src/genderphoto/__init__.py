@@ -4,6 +4,25 @@ genderphoto - Gender classification using name inference + photo face analysis +
 
 __version__ = "0.1.0"
 
+import logging
+
+def _suppress_noisy_loggers():
+    noisy_loggers = [
+        'icrawler',
+        'icrawler.crawler',
+        'urllib3',
+        'tensorflow',
+        'h5py',
+        'PIL',
+        'downloader',
+        'parser',
+        'feeder'
+    ]
+    for name in noisy_loggers:
+        logging.getLogger(name).setLevel(logging.CRITICAL)
+
+_suppress_noisy_loggers()
+
 from genderphoto.name_classifier import classify_name
 
 

@@ -91,7 +91,13 @@ def run_ensemble(
     confs = [r[1] for r in valid_results]
     n_M = genders.count('M')
     n_F = genders.count('F')
-    best_idx = max(range(len(valid_results)), key=lambda i: valid_results[i][1])
+    # Pick the best image for VLM fallback. Prioritize single-face images.
+    def img_score(r):
+        conf = r[1]
+        n_faces = r[4]['n_faces']
+        return conf - (100 if n_faces != 1 else 0)
+    
+    best_idx = max(range(len(valid_results)), key=lambda i: img_score(valid_results[i]))
     best_gender, best_conf, best_img, best_photo, best_raw = valid_results[best_idx]
 
     log.info(
@@ -176,7 +182,7 @@ def run_ensemble(
     return {
         'gender': vlm_gender,
         'gender_raw': f'OVERRIDE: vlm={vlm_result.get("gender_raw")}, df={n_M}M_{n_F}F',
-        'confidence': 85.0,
+        'confidence': 95.0,
         'face_detected': True,
         'n_faces': 1,
         'classifier': 'ensemble_vlm_override',
