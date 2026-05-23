@@ -23,11 +23,12 @@ classifiers = [
 
 dependencies = [
     "pandas>=1.5",
-    "numpy>=1.21",
+    "numpy>=1.21,<2.0.0",
     "Pillow>=9.0",
     "requests>=2.28",
     "deepface>=0.0.89",
     "retina-face>=0.0.13",
+    "tf-keras>=2.15.0",
     "icrawler>=0.6.6",
     "global-gender-predictor>=0.0.5",
     "ddgs>=9.8.0",
