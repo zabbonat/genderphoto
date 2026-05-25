@@ -125,6 +125,38 @@ def search_photos(
                 log.warning("DDG search failed for '%s': %s", query, e)
             time.sleep(sleep)
             
+    elif search_engine.lower() == 'baidu':
+        from icrawler.builtin import BaiduImageCrawler
+        for rank, (query, query_type) in enumerate(queries):
+            tmp_dir = tempfile.mkdtemp(prefix='inv_photo_')
+            try:
+                crawler = BaiduImageCrawler(
+                    storage={'root_dir': tmp_dir},
+                    log_level=logging.WARNING,
+                )
+                crawler.crawl(
+                    keyword=query,
+                    max_num=max_images,
+                    file_idx_offset=0,
+                )
+                for fpath in glob.glob(os.path.join(tmp_dir, '*')):
+                    results.append({
+                        'url': fpath,
+                        'query': query,
+                        'query_type': query_type,
+                        'query_rank': rank,
+                    })
+                if results:
+                    _temp_dirs.append(tmp_dir)
+                    log.info("Found %d images for '%s' via Baidu %s", len(results), name, query_type)
+                    return results
+                else:
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception as e:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                log.warning("Baidu search failed for '%s': %s", query, e)
+            time.sleep(sleep)
+
     else:  # bing
         from icrawler.builtin import BingImageCrawler
         for rank, (query, query_type) in enumerate(queries):
