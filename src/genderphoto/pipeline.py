@@ -39,7 +39,7 @@ def classify_inventor(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
-    detector_backend: str = 'retinaface',
+    detector_backend: str = 'ssd',
 ) -> dict:
     """
     Full classification pipeline for a single inventor.

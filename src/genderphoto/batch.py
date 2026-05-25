@@ -45,7 +45,7 @@ def classify_batch(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
-    detector_backend: str = 'retinaface',
+    detector_backend: str = 'ssd',
 ) -> pd.DataFrame:
     """
     Process a DataFrame of inventors, adding gender classification columns.

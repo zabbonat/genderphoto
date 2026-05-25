@@ -31,7 +31,7 @@ def run_ensemble(
     max_images: int = 5,
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
-    detector_backend: str = 'retinaface',
+    detector_backend: str = 'ssd',
 ) -> tuple[dict, int, Image.Image | None]:
     """
     Run the ensemble classifier on a set of photos.
