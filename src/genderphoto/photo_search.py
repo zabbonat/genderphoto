@@ -82,7 +82,7 @@ def search_photos(
             tmp_dir = tempfile.mkdtemp(prefix='inv_photo_ddg_')
             try:
                 with DDGS() as ddgs:
-                    ddg_results = list(ddgs.images(query, max_results=max_images, safesearch='on'))
+                    ddg_results = list(ddgs.images(query, max_results=max_images))
                 
                 # Download URLs
                 for idx, r in enumerate(ddg_results):
