@@ -41,7 +41,7 @@ def classify_batch(
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
     checkpoint_path: str = 'checkpoint.csv',
-    checkpoint_every: int = 100,
+    checkpoint_every: int = 500,
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
