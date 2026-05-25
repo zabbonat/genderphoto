@@ -168,7 +168,6 @@ def search_photos(
                 )
                 crawler.crawl(
                     keyword=query,
-                    filters={'safe': 'strict'},
                     max_num=max_images,
                     min_size=(100, 100),
                     file_idx_offset=0,
