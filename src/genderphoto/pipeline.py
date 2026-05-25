@@ -131,8 +131,18 @@ def classify_inventor(
         # Stage 2: photo-based classification
         log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
 
+        actual_engine = search_engine
+        if actual_engine == 'auto':
+            from genderphoto.utils import is_asian_name
+            if country_code in ['CN', 'TW', 'HK', 'KR', 'KP', 'SG', 'VN'] or is_asian_name(name):
+                actual_engine = 'baidu'
+            else:
+                actual_engine = 'duckduckgo'
+            if verbose:
+                log.info("Auto search engine selected '%s' for %s", actual_engine, name)
+
         try:
-            photos = search_photos(name, affiliation, max_images, search_engine=search_engine)
+            photos = search_photos(name, affiliation, max_images, search_engine=actual_engine)
         except Exception as e:
             log.warning("Photo search error for %s: %s", name, e)
             base['error'] = f'photo_search_error: {str(e)[:100]}'

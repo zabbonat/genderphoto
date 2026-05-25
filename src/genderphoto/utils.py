@@ -111,3 +111,21 @@ def extract_first_name(full_name: str) -> str:
     if ',' in full_name:
         return full_name.split(',')[1].strip().split()[0]
     return full_name.split()[0]
+
+
+ASIAN_SURNAMES = {
+    'wang', 'li', 'zhang', 'liu', 'chen', 'yang', 'huang', 'zhao', 'wu', 'zhou',
+    'xu', 'sun', 'ma', 'zhu', 'hu', 'guo', 'lin', 'he', 'gao', 'liang', 'zheng',
+    'luo', 'song', 'xie', 'tang', 'han', 'cao', 'deng', 'xiao', 'feng', 'cheng',
+    'cai', 'yuan', 'peng', 'pan', 'shen', 'ding', 'wei', 'jiang', 'ye', 'hong',
+    'kim', 'lee', 'park', 'choi', 'jeong', 'kang', 'cho', 'yoon', 'jang', 'lim',
+    'nguyen', 'tran', 'le', 'pham', 'huynh', 'hoang', 'phan', 'vu', 'vo', 'dang',
+}
+
+def is_asian_name(full_name: str) -> bool:
+    """
+    Check if the name likely belongs to an East Asian inventor based on a 
+    set of the most common Chinese, Korean, and Vietnamese surnames.
+    """
+    parts = full_name.lower().replace('-', ' ').split()
+    return any(p in ASIAN_SURNAMES for p in parts)

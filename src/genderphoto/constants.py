@@ -20,8 +20,8 @@ DEFAULT_VLM = 'qwen2.5vl:7b'
 # Default maximum images to download per inventor
 DEFAULT_MAX_IMAGES = 5
 
-# Default search engine for photos ('bing' or 'duckduckgo')
-DEFAULT_SEARCH_ENGINE = 'bing'
+# Default search engine for photos ('auto', 'duckduckgo', 'bing', 'baidu')
+DEFAULT_SEARCH_ENGINE = 'auto'
 
 # Default sleep between inventors (seconds)
 DEFAULT_SLEEP = 2.5
