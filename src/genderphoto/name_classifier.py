@@ -71,6 +71,9 @@ def classify_name(
     fn = first_name.strip()
     fn_lower = fn.lower()
     
+    if threshold is None:
+        threshold = DEFAULT_NAME_THRESHOLD
+        
     # Check Chinese Pinyin Dictionary for unambiguous Asian names
     is_asian_country = country_code and country_code.upper() in ['CN', 'TW', 'HK', 'SG', 'KR', 'KP', 'VN']
     if is_asian_country or (full_name and is_asian_name(full_name)):
