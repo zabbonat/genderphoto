@@ -82,7 +82,7 @@ def search_photos(
             tmp_dir = tempfile.mkdtemp(prefix='inv_photo_ddg_')
             try:
                 with DDGS() as ddgs:
-                    ddg_results = list(ddgs.images(query, max_results=max_images))
+                    ddg_results = list(ddgs.images(query, max_results=max_images, safesearch='on'))
                 
                 # Download URLs
                 for idx, r in enumerate(ddg_results):
@@ -168,6 +168,7 @@ def search_photos(
                 )
                 crawler.crawl(
                     keyword=query,
+                    filters={'safe': 'strict'},
                     max_num=max_images,
                     min_size=(100, 100),
                     file_idx_offset=0,
