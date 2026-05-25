@@ -101,9 +101,7 @@ def classify_inventor(
 
         # Stage 1: name-based classification
         kwargs = {}
-        if name_threshold is not None:
-            kwargs['threshold'] = name_threshold
-        name_result = classify_name(first_name, country_code, **kwargs)
+        name_result = classify_name(first_name, country_code, threshold=name_threshold, full_name=name)
 
         base = {
             'inventor_name': name,

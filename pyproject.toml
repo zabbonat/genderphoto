@@ -44,3 +44,6 @@ Paper = "https://doi.org/PLACEHOLDER"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"genderphoto.data" = ["*.json"]

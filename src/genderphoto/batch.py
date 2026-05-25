@@ -129,7 +129,7 @@ def classify_batch(
             full_name = row[name_col]
             first_name = extract_first_name(full_name)
             country = row.get(country_col) if country_col in df.columns else None
-            nr = classify_name(first_name, country, **kwargs)
+            nr = classify_name(first_name, country, full_name=full_name, **kwargs)
             name_results.append(nr)
 
         name_df = pd.DataFrame(name_results)
