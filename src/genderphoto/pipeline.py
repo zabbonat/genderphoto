@@ -130,7 +130,8 @@ def classify_inventor(
         log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
 
         actual_engine = search_engine
-        if actual_engine == 'auto':
+        is_auto = actual_engine == 'auto'
+        if is_auto:
             from genderphoto.utils import is_asian_name
             if country_code in ['CN', 'TW', 'HK', 'KR', 'KP', 'SG', 'VN'] or is_asian_name(name):
                 actual_engine = 'baidu'
@@ -139,27 +140,45 @@ def classify_inventor(
             if verbose:
                 log.info("Auto search engine selected '%s' for %s", actual_engine, name)
 
-        try:
-            photos = search_photos(name, affiliation, max_images, search_engine=actual_engine)
-        except Exception as e:
-            log.warning("Photo search error for %s: %s", name, e)
-            base['error'] = f'photo_search_error: {str(e)[:100]}'
-            return base
+        # Try classification, with fallback to duckduckgo if baidu fails
+        engines_to_try = [actual_engine]
+        if is_auto and actual_engine == 'baidu':
+            engines_to_try.append('duckduckgo')
 
-        if not photos:
-            base['error'] = 'no_images_found'
-            log.warning("  No images for %s", name)
-            return base
+        result = None
+        tried = 0
+        best_img = None
+        photo_meta = {}
 
-        # Stage 3: ensemble classification
-        result, tried, best_img = run_ensemble(
-            photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
-            detector_backend=detector_backend
-        )
-        photo_meta = result.pop('_photo', {})
+        for engine in engines_to_try:
+            try:
+                photos = search_photos(name, affiliation, max_images, search_engine=engine)
+            except Exception as e:
+                log.warning("Photo search error for %s (%s): %s", name, engine, e)
+                continue
+
+            if not photos:
+                log.warning("  No images for %s via %s", name, engine)
+                continue
+
+            # Run ensemble
+            result, tried, best_img = run_ensemble(
+                photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
+                detector_backend=detector_backend
+            )
+            photo_meta = result.pop('_photo', {})
+
+            # If we got a gender, stop trying engines
+            if result.get('gender'):
+                break
+            else:
+                if engine != engines_to_try[-1]:
+                    log.info("  %s failed for %s, falling back to next engine...", engine, name)
+                result = None  # Reset so we try next engine
+
         base['images_tried'] = tried
 
-        if result.get('gender') and (result.get('confidence') or 0) >= confidence_threshold:
+        if result and result.get('gender') and (result.get('confidence') or 0) >= confidence_threshold:
             saved = None
             if save_photo_flag and best_img:
                 saved = save_photo(best_img, name, photo_dir)
@@ -178,7 +197,7 @@ def classify_inventor(
         else:
             base['gender'] = 'UNKNOWN'
             base['method'] = 'unresolved'
-            base['error'] = result.get('error', 'no_confident_classification')
+            base['error'] = (result or {}).get('error', 'no_confident_classification')
             log.warning("  Could not classify %s (%d imgs)", name, tried)
 
         return base
