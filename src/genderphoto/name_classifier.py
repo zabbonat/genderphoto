@@ -107,11 +107,10 @@ def classify_name(
             'method': 'name_based',
         }
 
-    # Cross-cultural check: Italian male names used outside Italy
+    # Cross-cultural check: Italian male names used outside Italy or when country is unknown
     is_cross_cultural = (
         fn_lower in ITALIAN_MALE_NAMES
-        and country_code is not None
-        and country_code.upper() != 'IT'
+        and (country_code is None or country_code.upper() != 'IT')
     )
 
     is_ambiguous = (
