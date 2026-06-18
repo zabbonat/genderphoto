@@ -6,17 +6,22 @@ __version__ = "0.1.0"
 
 import logging
 
+import os
+import warnings
+
+# Suppress TensorFlow C++ logs and oneDNN warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['ABSL_LOG_LEVEL'] = '3'
+# Suppress Python warnings (like the tf_keras deprecation)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', module='tensorflow')
+warnings.filterwarnings('ignore', module='tf_keras')
+
 def _suppress_noisy_loggers():
     noisy_loggers = [
-        'icrawler',
-        'icrawler.crawler',
-        'urllib3',
-        'tensorflow',
-        'h5py',
-        'PIL',
-        'downloader',
-        'parser',
-        'feeder'
+        'icrawler', 'icrawler.crawler', 'urllib3', 'tensorflow',
+        'h5py', 'PIL', 'downloader', 'parser', 'feeder', 'tf_keras'
     ]
     for name in noisy_loggers:
         logging.getLogger(name).setLevel(logging.CRITICAL)
