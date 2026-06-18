@@ -18,13 +18,13 @@ OLLAMA_URL = 'http://localhost:11434/api/generate'
 DEFAULT_VLM = 'qwen2.5vl:7b'
 
 # Default maximum images to download per inventor
-DEFAULT_MAX_IMAGES = 5
+DEFAULT_MAX_IMAGES = 3
 
 # Default search engine for photos ('auto', 'duckduckgo', 'bing', 'baidu')
 DEFAULT_SEARCH_ENGINE = 'auto'
 
 # Default sleep between inventors (seconds)
-DEFAULT_SLEEP = 2.5
+DEFAULT_SLEEP = 0.5
 
 # Default confidence threshold for accepting a photo classification
 DEFAULT_CONFIDENCE_THRESHOLD = 75.0

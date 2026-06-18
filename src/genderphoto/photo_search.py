@@ -89,8 +89,9 @@ def search_photos(
     queries = []
     if affiliation:
         queries.append((f'{name} {affiliation}', 'institutional'))
-    queries.append((f'{name} researcher', 'role_keywords'))
-    queries.append((f'{name}', 'name_only'))
+    else:
+        queries.append((f'{name} researcher', 'role_keywords'))
+        queries.append((f'{name}', 'name_only'))
 
     results = []
     
