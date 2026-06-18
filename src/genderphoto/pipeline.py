@@ -20,7 +20,7 @@ from genderphoto.constants import (
 )
 from genderphoto.ensemble import run_ensemble
 from genderphoto.name_classifier import classify_name
-from genderphoto.photo_search import search_photos
+from genderphoto.photo_search import search_photos, cleanup_search_results
 from genderphoto.utils import extract_first_name, save_photo
 
 log = logging.getLogger(__name__)
@@ -149,6 +149,7 @@ def classify_inventor(
         tried = 0
         best_img = None
         photo_meta = {}
+        photos = []
 
         for engine in engines_to_try:
             try:
@@ -174,6 +175,11 @@ def classify_inventor(
             else:
                 if engine != engines_to_try[-1]:
                     log.info("  %s failed for %s, falling back to next engine...", engine, name)
+                
+                # Clean up photos from the failed engine before trying the next
+                if photos:
+                    cleanup_search_results(photos)
+                    
                 result = None  # Reset so we try next engine
 
         base['images_tried'] = tried
@@ -199,6 +205,10 @@ def classify_inventor(
             base['method'] = 'unresolved'
             base['error'] = (result or {}).get('error', 'no_confident_classification')
             log.warning("  Could not classify %s (%d imgs)", name, tried)
+
+        # Cleanup the temporary directory with downloaded photos
+        if photos:
+            cleanup_search_results(photos)
 
         return base
 

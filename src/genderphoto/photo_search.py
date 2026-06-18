@@ -31,6 +31,24 @@ def _cleanup_temp_dirs() -> None:
     _temp_dirs.clear()
 
 
+def cleanup_search_results(photos: list[dict]) -> None:
+    """
+    Manually clean up the temporary directory containing these photos.
+    """
+    if not photos:
+        return
+    try:
+        url = photos[0].get('url', '')
+        if url and os.path.exists(url):
+            tmp_dir = os.path.dirname(url)
+            if 'inv_photo_' in os.path.basename(tmp_dir) or 'inv_photo_' in tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                if tmp_dir in _temp_dirs:
+                    _temp_dirs.remove(tmp_dir)
+    except Exception as e:
+        log.debug("Failed to cleanup %s: %s", photos, e)
+
+
 atexit.register(_cleanup_temp_dirs)
 
 
