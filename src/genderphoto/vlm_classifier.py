@@ -67,7 +67,9 @@ def classify_vlm(
 
         prompt = (
             'What is the gender of the main person in this photo? '
-            'Answer with ONLY one word: male or female'
+            'Answer with ONLY one word: male or female. '
+            'IMPORTANT: Base your decision STRICTLY on the visual features of the person in the image. '
+            'Do NOT guess based on the cultural or gender associations of the name.'
         )
         if name:
             ctx = f"This is a photo of {name}"
