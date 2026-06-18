@@ -136,14 +136,14 @@ def classify_inventor(
             if country_code in ['CN', 'TW', 'HK', 'KR', 'KP', 'SG', 'VN'] or is_asian_name(name):
                 actual_engine = 'baidu'
             else:
-                actual_engine = 'duckduckgo'
+                actual_engine = 'bing'
             if verbose:
                 log.info("Auto search engine selected '%s' for %s", actual_engine, name)
 
-        # Try classification, with fallback to duckduckgo if baidu fails
+        # Try classification, with fallback to bing if baidu fails
         engines_to_try = [actual_engine]
         if is_auto and actual_engine == 'baidu':
-            engines_to_try.append('duckduckgo')
+            engines_to_try.append('bing')
 
         result = None
         tried = 0
