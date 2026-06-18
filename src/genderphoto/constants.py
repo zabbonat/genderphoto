@@ -6,12 +6,12 @@ Constants and default configuration for genderphoto.
 ISO_TO_GENDER_GUESSER = {
     'IT': 'italy', 'US': 'usa', 'GB': 'great_britain', 'UK': 'great_britain',
     'IE': 'ireland', 'ES': 'spain', 'PT': 'portugal', 'FR': 'france',
-    'BE': 'belgium', 'LU': 'luxembourg', 'NL': 'netherlands', 'DE': 'germany',
+    'BE': 'belgium', 'LU': 'luxembourg', 'NL': 'the_netherlands', 'DE': 'germany',
     'AT': 'austria', 'CH': 'swiss', 'IS': 'iceland', 'DK': 'denmark',
     'NO': 'norway', 'SE': 'sweden', 'FI': 'finland', 'EE': 'estonia',
     'LV': 'latvia', 'LT': 'lithuania', 'PL': 'poland', 'CZ': 'czech_republic',
     'SK': 'slovakia', 'HU': 'hungary', 'RO': 'romania', 'BG': 'bulgaria',
-    'BA': 'bosnia', 'HR': 'croatia', 'RS': 'serbia', 'AL': 'albania',
+    'BA': 'bosniaand', 'HR': 'croatia', 'RS': 'serbia', 'AL': 'albania',
     'GR': 'greece', 'RU': 'russia', 'BY': 'belarus', 'UA': 'ukraine',
     'IL': 'israel', 'TR': 'turkey', 'IN': 'india', 'JP': 'japan', 'CN': 'china',
 }
