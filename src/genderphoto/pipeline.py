@@ -164,8 +164,9 @@ def classify_inventor(
 
             # Run ensemble
             result, tried, best_img = run_ensemble(
-                photos, max_images, vlm_model=vlm_model, ollama_url=ollama_url,
-                detector_backend=detector_backend
+                photos, name=name, affiliation=affiliation,
+                max_images=max_images, vlm_model=vlm_model, 
+                ollama_url=ollama_url, detector_backend=detector_backend
             )
             photo_meta = result.pop('_photo', {})
 

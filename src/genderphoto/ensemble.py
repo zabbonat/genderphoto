@@ -28,6 +28,8 @@ log = logging.getLogger(__name__)
 
 def run_ensemble(
     photos: list[dict],
+    name: str = None,
+    affiliation: str = None,
     max_images: int = 5,
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
@@ -97,7 +99,7 @@ def run_ensemble(
                 best_photo_meta = photo
 
             log.info("    VLM checking face-less image...")
-            vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url)
+            vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url, name=name, affiliation=affiliation)
             g = vlm_res.get('gender')
             
             if g:
@@ -183,7 +185,7 @@ def run_ensemble(
     for i, r in enumerate(sorted_results[:3]):
         img = r[2]
         log.info("    VLM checking image %d...", i + 1)
-        vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url)
+        vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url, name=name, affiliation=affiliation)
         g = vlm_res.get('gender')
         
         if g:

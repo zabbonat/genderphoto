@@ -23,6 +23,8 @@ def classify_vlm(
     img: Image.Image,
     model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
+    name: str = None,
+    affiliation: str = None,
 ) -> dict:
     """
     Classify gender using a vision-language model via Ollama.
@@ -35,6 +37,10 @@ def classify_vlm(
         Ollama model name (default: qwen2.5vl:7b).
     ollama_url : str
         Ollama API endpoint URL.
+    name : str, optional
+        The person's name for context.
+    affiliation : str, optional
+        The person's affiliation for context.
 
     Returns
     -------
@@ -59,14 +65,21 @@ def classify_vlm(
         img_r.save(buf, format='JPEG', quality=85)
         img_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
+        prompt = (
+            'What is the gender of the main person in this photo? '
+            'Answer with ONLY one word: male or female'
+        )
+        if name:
+            ctx = f"This is a photo of {name}"
+            if affiliation:
+                ctx += f" from {affiliation}"
+            prompt = f"{ctx}. {prompt}"
+
         resp = requests.post(
             ollama_url,
             json={
                 'model': model,
-                'prompt': (
-                    'What is the gender of the main person in this photo? '
-                    'Answer with ONLY one word: male or female'
-                ),
+                'prompt': prompt,
                 'images': [img_b64],
                 'stream': False,
             },

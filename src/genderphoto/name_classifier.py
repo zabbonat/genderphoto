@@ -12,15 +12,18 @@ import logging
 import json
 import os
 
+import gender_guesser.detector
+
 from global_gender_predictor import GlobalGenderPredictor
 
-from genderphoto.constants import ITALIAN_MALE_NAMES, DEFAULT_NAME_THRESHOLD
+from genderphoto.constants import ISO_TO_GENDER_GUESSER, DEFAULT_NAME_THRESHOLD
 from genderphoto.utils import is_asian_name
 
 log = logging.getLogger(__name__)
 
-# Module-level predictor (created once)
+# Module-level predictors (created once)
 _predictor = GlobalGenderPredictor()
+_gg_detector = gender_guesser.detector.Detector()
 
 _chinese_pinyin_dict = None
 
@@ -88,42 +91,47 @@ def classify_name(
                 'method': 'name_based',
             }
 
-    # Get probability from global-gender-predictor
+    # Get global probability from global-gender-predictor
     result_gender, weight = _predictor.predict_gender_probability(fn)
 
-    # Override: Italian male names IN Italy are always male
-    is_italian_in_italy = (
-        fn_lower in ITALIAN_MALE_NAMES
-        and country_code is not None
-        and country_code.upper() == 'IT'
-    )
-    if is_italian_in_italy:
-        return {
-            'gender': 'M',
-            'gender_raw': 'Male',
-            'name_probability': 1.0,
-            'is_ambiguous': False,
-            'ambiguity_reason': f'italian_male_in_italy_{fn_lower}',
-            'method': 'name_based',
-        }
+    # Use gender-guesser to determine if the name is strictly cross-cultural worldwide
+    # A name is cross-cultural if it has both a male and female context in the WGND dataset.
+    name_cap = fn_lower.capitalize()
+    gg_record = _gg_detector.names.get(name_cap)
+    
+    is_globally_cross_cultural = False
+    if gg_record:
+        has_male = 'male' in gg_record or 'mostly_male' in gg_record
+        has_female = 'female' in gg_record or 'mostly_female' in gg_record
+        is_globally_cross_cultural = has_male and has_female
 
-    # Cross-cultural check: Italian male names used outside Italy or when country is unknown
-    is_cross_cultural = (
-        fn_lower in ITALIAN_MALE_NAMES
-        and (country_code is None or country_code.upper() != 'IT')
-    )
-
-    is_ambiguous = (
-        result_gender == 'Unknown'
-        or weight < threshold
-        or is_cross_cultural
-    )
-
+    is_ambiguous = False
     reason = result_gender
-    if is_cross_cultural:
-        reason = f'{result_gender}_but_cross_cultural_{fn_lower}_in_{country_code}'
-    elif result_gender != 'Unknown' and weight < threshold:
-        reason = f'{result_gender}_low_probability_{weight:.2f}'
+
+    if is_globally_cross_cultural:
+        mapped_country = None
+        if country_code:
+            mapped_country = ISO_TO_GENDER_GUESSER.get(country_code.upper())
+            
+        if not mapped_country:
+            # Cross-cultural name but country is unknown or unsupported
+            is_ambiguous = True
+            reason = f'cross_cultural_name_{fn_lower}_country_unknown'
+        else:
+            # We know the country, let's ask gender-guesser for this specific country
+            local_gender = _gg_detector.get_gender(name_cap, mapped_country)
+            if local_gender in ['male', 'female']:
+                result_gender = 'Male' if local_gender == 'male' else 'Female'
+                weight = 1.0  # We are confident for this specific country
+            else:
+                # Still ambiguous even in this country (e.g., 'mostly_male', 'unknown', 'andy')
+                is_ambiguous = True
+                reason = f'cross_cultural_name_{fn_lower}_ambiguous_in_{mapped_country}'
+    else:
+        # Not cross-cultural globally, rely on the global probability threshold
+        if result_gender == 'Unknown' or weight < threshold:
+            is_ambiguous = True
+            reason = f'{result_gender}_low_probability_{weight:.2f}'
 
     # Map result to M/F/None
     gender = None

@@ -2,10 +2,18 @@
 Constants and default configuration for genderphoto.
 """
 
-# Italian first names that are male in Italy but often female elsewhere
-ITALIAN_MALE_NAMES = {
-    'andrea', 'simone', 'nicola', 'gabriele', 'michele', 'daniele',
-    'raffaele', 'samuele', 'emanuele', 'pasquale', 'luca', 'mattia',
+# Map ISO 2-letter country codes to gender_guesser country strings
+ISO_TO_GENDER_GUESSER = {
+    'IT': 'italy', 'US': 'usa', 'GB': 'great_britain', 'UK': 'great_britain',
+    'IE': 'ireland', 'ES': 'spain', 'PT': 'portugal', 'FR': 'france',
+    'BE': 'belgium', 'LU': 'luxembourg', 'NL': 'netherlands', 'DE': 'germany',
+    'AT': 'austria', 'CH': 'swiss', 'IS': 'iceland', 'DK': 'denmark',
+    'NO': 'norway', 'SE': 'sweden', 'FI': 'finland', 'EE': 'estonia',
+    'LV': 'latvia', 'LT': 'lithuania', 'PL': 'poland', 'CZ': 'czech_republic',
+    'SK': 'slovakia', 'HU': 'hungary', 'RO': 'romania', 'BG': 'bulgaria',
+    'BA': 'bosnia', 'HR': 'croatia', 'RS': 'serbia', 'AL': 'albania',
+    'GR': 'greece', 'RU': 'russia', 'BY': 'belarus', 'UA': 'ukraine',
+    'IL': 'israel', 'TR': 'turkey', 'IN': 'india', 'JP': 'japan', 'CN': 'china',
 }
 
 # DeepFace confidence threshold for accepting consensus without VLM

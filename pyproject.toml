@@ -33,6 +33,7 @@ dependencies = [
     "global-gender-predictor>=0.0.5",
     "ddgs>=9.8.0",
     "tqdm>=4.60",
+    "gender-guesser>=0.4.0",
 ]
 
 [project.optional-dependencies]
