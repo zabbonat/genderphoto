@@ -85,51 +85,11 @@ def run_ensemble(
         ))
 
     if not valid_results:
-        log.info("    No faces detected by DeepFace. Aggressive fallback to VLM...")
-        vlm_votes = []
-        best_img = None
-        best_photo_meta = {}
-
-        for photo in photos[:3]:
-            img = load_image(photo['url'])
-            if img is None:
-                continue
-            if best_img is None:
-                best_img = img
-                best_photo_meta = photo
-
-            log.info("    VLM checking face-less image...")
-            vlm_res = classify_vlm(img, model=vlm_model, ollama_url=ollama_url, name=name, affiliation=affiliation)
-            g = vlm_res.get('gender')
-            
-            if g:
-                vlm_votes.append(g)
-                if vlm_votes.count(g) >= 2:
-                    break
-            elif vlm_res.get('error') == 'OLLAMA_NOT_RUNNING':
-                break
-
-        vlm_M = vlm_votes.count('M')
-        vlm_F = vlm_votes.count('F')
-        vlm_gender = 'M' if vlm_M > vlm_F else 'F' if vlm_F > vlm_M else None
-
-        if vlm_gender:
-            log.info("    VLM succeeded on face-less image: %s", vlm_gender)
-            return {
-                'gender': vlm_gender,
-                'gender_raw': f'vlm_noface_votes_{vlm_votes}',
-                'confidence': 85.0,
-                'face_detected': False,
-                'n_faces': 0,
-                'classifier': 'ensemble_vlm_noface_fallback',
-                'error': None,
-                '_photo': best_photo_meta,
-            }, images_tried, best_img
-
+        log.info("    No faces detected by DeepFace in any image. Returning UNKNOWN.")
         return {
             'gender': None, 'confidence': None, 'face_detected': False,
-            'n_faces': 0, 'classifier': 'all_failed',
-            'error': 'no_face_detected_and_vlm_failed', '_photo': {},
+            'n_faces': 0, 'classifier': 'no_faces_detected',
+            'error': 'no_faces_detected', '_photo': {},
         }, images_tried, None
 
     # === PHASE 2: Consensus ===
