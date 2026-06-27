@@ -41,6 +41,7 @@ def classify_batch(
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
     checkpoint_path: str = 'checkpoint.csv',
+    name_checkpoint_path: str = 'name_based.csv',
     checkpoint_every: int = 500,
     verbose: bool = False,
     name_threshold: float = None,
@@ -79,6 +80,8 @@ def classify_batch(
         Ollama API endpoint.
     checkpoint_path : str, optional
         Path to periodically save intermediate results as CSV.
+    name_checkpoint_path : str, optional
+        Path to save initial Stage 1 name classification results immediately.
     checkpoint_every : int
         Save checkpoint every N inventors.
     verbose : bool
@@ -157,10 +160,33 @@ def classify_batch(
         result_cols = [
             'gender_photo', 'photo_confidence', 'photo_url', 'photo_saved_path',
             'photo_images_tried', 'photo_classifier', 'photo_error',
+            'gender_final', 'gender_method',
         ]
         for c in result_cols:
             if c not in df.columns:
                 df[c] = None
+
+        # Pre-populate final gender for unambiguous names right after Stage 1
+        for idx_row, row in df.iterrows():
+            if not row.get('is_ambiguous', True):
+                g = str(row.get('gender_name_raw', '')).lower()
+                if g == 'male':
+                    df.at[idx_row, 'gender_final'] = 'M'
+                    df.at[idx_row, 'gender_method'] = 'name_based'
+                elif g == 'female':
+                    df.at[idx_row, 'gender_final'] = 'F'
+                    df.at[idx_row, 'gender_method'] = 'name_based'
+            else:
+                df.at[idx_row, 'gender_final'] = 'UNKNOWN'
+                df.at[idx_row, 'gender_method'] = 'pending_photo'
+
+        # Immediately save Stage 1 name-based classification results
+        if name_checkpoint_path:
+            df.to_csv(name_checkpoint_path, index=False)
+            if verbose:
+                log.info("Name-based classification saved to %s", name_checkpoint_path)
+            elif n_total > 0:
+                tqdm.write(f"✓ Name-based checkpoint saved to {name_checkpoint_path}")
 
         # Stage 2: Photo pipeline for ambiguous names only
         ambiguous_mask = df['is_ambiguous'] == True  # noqa: E712
@@ -209,6 +235,13 @@ def classify_batch(
             df.at[idx, 'photo_images_tried'] = result.get('images_tried', 0)
             df.at[idx, 'photo_classifier'] = result.get('method')
             df.at[idx, 'photo_error'] = result.get('error')
+
+            if result['gender'] != 'UNKNOWN':
+                df.at[idx, 'gender_final'] = result['gender']
+                df.at[idx, 'gender_method'] = result.get('method', 'photo')
+            else:
+                df.at[idx, 'gender_final'] = 'UNKNOWN'
+                df.at[idx, 'gender_method'] = 'unresolved'
 
             # Update progress bar
             if pbar:
