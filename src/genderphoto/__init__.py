@@ -28,13 +28,17 @@ def _suppress_noisy_loggers():
 
 _suppress_noisy_loggers()
 
-from genderphoto.name_classifier import classify_name
+def classify_name(*args, **kwargs):
+    """Lazy-loaded wrapper for name_classifier.classify_name."""
+    from genderphoto.name_classifier import classify_name as _cn
+    return _cn(*args, **kwargs)
 
 
 def classify_inventor(*args, **kwargs):
     """Lazy-loaded wrapper for pipeline.classify_inventor."""
     from genderphoto.pipeline import classify_inventor as _ci
     return _ci(*args, **kwargs)
+
 
 
 def classify_batch(*args, **kwargs):
@@ -49,10 +53,18 @@ def list_available_vlm_models(*args, **kwargs):
     return _lm(*args, **kwargs)
 
 
+def compute_partial_identification_bounds(*args, **kwargs):
+    """Lazy-loaded wrapper for utils.compute_partial_identification_bounds."""
+    from genderphoto.utils import compute_partial_identification_bounds as _cpi
+    return _cpi(*args, **kwargs)
+
+
 __all__ = [
     "classify_name",
     "classify_inventor",
     "classify_batch",
     "list_available_vlm_models",
+    "compute_partial_identification_bounds",
     "__version__",
 ]
+

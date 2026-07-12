@@ -129,3 +129,65 @@ def is_asian_name(full_name: str) -> bool:
     """
     parts = full_name.lower().replace('-', ' ').split()
     return any(p in ASIAN_SURNAMES for p in parts)
+
+
+def compute_partial_identification_bounds(df, gender_col: str = 'gender_final') -> dict:
+    """
+    Compute partial-identification bounds (Manski bounds, 1989) for the female share
+    in a classified population where some records may remain unclassified ('UNKNOWN' or None).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing classification results.
+    gender_col : str
+        Column containing gender values ('M', 'F', 'UNKNOWN', None).
+
+    Returns
+    -------
+    dict
+        {
+            'total_population': int,
+            'classified_count': int,
+            'unknown_count': int,
+            'female_count': int,
+            'male_count': int,
+            'observed_female_share': float,  # % of F among classified
+            'lower_bound': float,            # % of F assuming all UNKNOWN are M
+            'upper_bound': float,            # % of F assuming all UNKNOWN are F
+        }
+    """
+    total = len(df)
+    if total == 0:
+        return {
+            'total_population': 0,
+            'classified_count': 0,
+            'unknown_count': 0,
+            'female_count': 0,
+            'male_count': 0,
+            'observed_female_share': 0.0,
+            'lower_bound': 0.0,
+            'upper_bound': 0.0,
+        }
+
+    s = df[gender_col].astype(str).str.upper()
+    f_count = int((s == 'F').sum())
+    m_count = int((s == 'M').sum())
+    classified = f_count + m_count
+    unknown = total - classified
+
+    obs_share = round((f_count / classified * 100.0), 2) if classified > 0 else 0.0
+    lower_bound = round((f_count / total * 100.0), 2)
+    upper_bound = round(((f_count + unknown) / total * 100.0), 2)
+
+    return {
+        'total_population': total,
+        'classified_count': classified,
+        'unknown_count': unknown,
+        'female_count': f_count,
+        'male_count': m_count,
+        'observed_female_share': obs_share,
+        'lower_bound': lower_bound,
+        'upper_bound': upper_bound,
+    }
+

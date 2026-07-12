@@ -73,13 +73,14 @@ classify_name("Wei", "CN")      # → {'gender': None, 'is_ambiguous': True, ...
 
 Each inventor goes through up to four stages. The pipeline stops as soon as one stage produces a confident result.
 
-1. **Name-based classification** — uses `global-gender-predictor` (backed by the WGND 2.0 dataset with 4.1M names) to resolve unambiguous names instantly. Names with a predicted probability below the `name_threshold` (default 0.75) are flagged as ambiguous. Italian male names (Andrea, Simone, Nicola, …) used outside Italy are also flagged.
+1. **Name-based screening & Cross-cultural conflict filter** — Uses `global-gender-predictor` (backed by WIPO WGND 2.0 with 4.1M names) combined with a dedicated Pinyin dictionary for unambiguous Chinese given names. Crucially, it incorporates a **cross-cultural conflict filter** (`gender-guesser`): when a name has conflicting gender identities globally (e.g., "Andrea" is male in Italy but female in English- and German-speaking countries), the pipeline checks the `country_code` parameter, which corresponds to the **inventor's country of residence** (from patent address metadata). If the name probability is below `name_threshold` (default 0.75) or exhibits an unresolved cross-cultural conflict outside the native residence country, it is flagged as `is_ambiguous = True` and routed to photo analysis. Note: `country_code` must be the inventor's country of residence, while institutional `affiliation` is reserved exclusively for Stage 2.
 
-2. **Photo search** — For ambiguous names, Bing image search (via `icrawler`) or DuckDuckGo (via `ddgs`) downloads up to `max_images` photos. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, stopping at the first query that returns results.
+2. **Photo search** — For ambiguous names, image search downloads up to `max_images` photos. Passing `search_engine="auto"` enables a cascading search engine fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, using the **inventor's institutional affiliation** (`affiliation`) to resolve homonyms and ensure high precision.
 
-3. **DeepFace consensus** — DeepFace (`retinaface` backend, `enforce_detection=True`) runs on every downloaded photo. If all images agree on the same gender with an average confidence ≥ 90%, the result is accepted without calling the VLM.
+3. **DeepFace consensus** — DeepFace (`retinaface` backend, `enforce_detection=True`) analyzes every downloaded photo. If all detected faces across all valid images agree on the same gender with an average confidence ≥ 90%, the consensus result is accepted (`deepface_consensus`) without calling the VLM.
 
-4. **VLM fallback** — When DeepFace results disagree across images, or the average confidence is below 90%, the best photo (highest DeepFace confidence) is sent to a local VLM via Ollama. If the VLM agrees with the DeepFace majority, confidence is set to 92%. If the VLM overrides DeepFace, confidence is 85%. If Ollama is not running, the pipeline falls back to DeepFace majority vote.
+4. **VLM tiebreaker / override** — When localized facial attribute analysis (`DeepFace`) produces conflicting results across images or yields uncertain confidence (< 90%), the best-quality image is passed to a local Vision-Language Model (`Qwen2.5-VL` via Ollama). Acting as an algorithmic **tiebreaker**, the VLM interprets the photograph holistically (evaluating attire, presentation, and context rather than localized facial geometry alone). If the VLM agrees with the DeepFace majority, the result is confirmed with 92% confidence (`ensemble_vlm_majority_agree`). If the VLM disagrees, its assessment overrides DeepFace (`ensemble_vlm_override` with 95% confidence), mitigating well-documented algorithmic biases of face detectors against East Asian women.
+
 
 ---
 
@@ -196,7 +197,25 @@ Names classified with a probability below `name_threshold` (default 0.75) are tr
 
 ---
 
+### `compute_partial_identification_bounds`
+
+Computes Manski bounds (1989) for the female share across a population where some inventors remain unclassified (`UNKNOWN` or `None`).
+
+```python
+from genderphoto import compute_partial_identification_bounds
+
+# Pass the final classified DataFrame
+bounds = compute_partial_identification_bounds(result_df, gender_col="gender_final")
+print(f"Observed F share among classified: {bounds['observed_female_share']}%")
+print(f"Plausible Manski bounds for total population: [{bounds['lower_bound']}%, {bounds['upper_bound']}%]")
+```
+
+**Returns** a dict containing `total_population`, `classified_count`, `unknown_count`, `female_count`, `male_count`, `observed_female_share`, `lower_bound` (% female if all unknowns are male), and `upper_bound` (% female if all unknowns are female).
+
+---
+
 ### `list_available_vlm_models`
+
 
 Queries your local Ollama instance and returns which models are installed, flagging the ones that support vision.
 
