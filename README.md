@@ -100,7 +100,7 @@ result = classify_inventor(
     save_photo_flag=False,            # save the best photo to disk (default: False)
     photo_dir="./inventor_photos",    # where to save photos
     search_engine="bing",             # 'bing' or 'duckduckgo' (default: 'bing')
-    detector_backend="ssd",           # face detector engine (default: 'ssd')
+    detector_backend="retinaface",    # face detector engine (default: 'retinaface')
     vlm_model="qwen2.5vl:7b",        # any Ollama vision model (see below)
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
     verbose=False,                    # True for step-by-step log output (default: False)
@@ -143,7 +143,7 @@ result_df = classify_batch(
     save_photos=True,                  # save best photos to disk (default: True)
     photo_dir="./inventor_photos",     # photo output directory
     search_engine="bing",              # 'bing' or 'duckduckgo'
-    detector_backend="ssd",            # face detector engine (default: 'ssd')
+    detector_backend="retinaface",     # face detector engine (default: 'retinaface')
     vlm_model="qwen2.5vl:7b",         # Ollama vision model
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
     checkpoint_path="checkpoint.csv",  # auto-save partial results (default: 'checkpoint.csv')
@@ -191,26 +191,35 @@ result = classify_name(
 
 **Returns** a dict with keys: `gender`, `gender_raw`, `is_ambiguous`, `ambiguity_reason`, `method`.
 
-The `country_code` matters because Italian male names (Andrea, Simone, Nicola, Gabriele, Michele, Daniele, Raffaele, Samuele, Emanuele, Pasquale, Luca, Mattia) are classified as unambiguously male when `country_code="IT"`, but flagged ambiguous for any other country.
+The `country_code` matters because Italian male names (Andrea, Simone, Nicola, Gabriele, Michele, Daniele, Raffaele, Samuele, Emanuele, Pasquale, Luca, Mattia) are classified as unambiguously male when `country_code="IT"`, but flagged ambiguous (`is_ambiguous=True`) for any other country or missing country code (`DE`, `US`, `FR`, `UK`, `None`), routing them to photo search.
 
-Names classified with a probability below `name_threshold` (default 0.75) are treated as ambiguous to avoid silent misclassifications on large datasets.
+Names classified with a probability below `name_threshold` (default 0.75) as well as curated cross-cultural names (`Dominique`, `Claude`, `Camille`, `Robin`, etc.) are treated as ambiguous to avoid silent misclassifications on large datasets.
 
 ---
 
 ### `compute_partial_identification_bounds`
 
-Computes Manski bounds (1989) for the female share across a population where some inventors remain unclassified (`UNKNOWN` or `None`).
+Computes Manski bounds (1989) for the female share across a population where some inventors remain unclassified (`UNKNOWN` or `None`), separates name-resolved vs photo-resolved shares ($p_N$ vs $p_P$), and calculates the **country-matched plausible scenario** ($p_{matched}$).
 
 ```python
 from genderphoto import compute_partial_identification_bounds
 
-# Pass the final classified DataFrame
-bounds = compute_partial_identification_bounds(result_df, gender_col="gender_final")
-print(f"Observed F share among classified: {bounds['observed_female_share']}%")
+# Pass the final classified DataFrame (including method and country columns if available)
+bounds = compute_partial_identification_bounds(
+    result_df, 
+    gender_col="gender_final",
+    method_col="gender_method",
+    country_col="country_code"
+)
+
+print(f"Observed F share overall: {bounds['observed_female_share']}%")
+print(f"  - Name-resolved share (p_N): {bounds['observed_female_share_name_resolved']}%")
+print(f"  - Photo/VLM-resolved share (p_P): {bounds['observed_female_share_photo_resolved']}%")
 print(f"Plausible Manski bounds for total population: [{bounds['lower_bound']}%, {bounds['upper_bound']}%]")
+print(f"Country-matched plausible scenario (p_matched): {bounds['country_matched_share']}%")
 ```
 
-**Returns** a dict containing `total_population`, `classified_count`, `unknown_count`, `female_count`, `male_count`, `observed_female_share`, `lower_bound` (% female if all unknowns are male), and `upper_bound` (% female if all unknowns are female).
+**Returns** a dict containing `total_population`, `classified_count`, `unknown_count`, `female_count`, `male_count`, `observed_female_share`, `observed_female_share_name_resolved` ($p_N$), `observed_female_share_photo_resolved` ($p_P$), `lower_bound` (% female assuming all unknowns are male), `upper_bound` (% female assuming all unknowns are female), and `country_matched_share` (% female where unknowns are imputed using country-specific classified female shares).
 
 ---
 

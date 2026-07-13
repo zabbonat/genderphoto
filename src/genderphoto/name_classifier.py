@@ -39,6 +39,17 @@ def _get_chinese_pinyin_dict() -> dict:
     return _chinese_pinyin_dict
 
 
+ITALIAN_CROSS_CULTURAL_MALE_NAMES = {
+    'andrea', 'simone', 'nicola', 'gabriele', 'michele', 'daniele', 
+    'luca', 'mattia', 'raffaele', 'samuele', 'emanuele', 'pasquale',
+}
+
+CURATED_CROSS_CULTURAL_NAMES = {
+    'dominique', 'claude', 'camille', 'robin', 'kim', 'jamie', 'morgan', 
+    'jan', 'rene', 'sacha', 'alex', 'sandy', 'jordan', 'taylor', 'casey', 'riley',
+}
+
+
 def classify_name(
     first_name: str, 
     country_code: str = None, 
@@ -91,11 +102,42 @@ def classify_name(
                 'method': 'name_based',
             }
 
+    # Check Italian Cross-Cultural Male Names outside Italy (e.g., Andrea in DE, Mattia in US)
+    if fn_lower in ITALIAN_CROSS_CULTURAL_MALE_NAMES:
+        if country_code and country_code.upper() == 'IT':
+            return {
+                'gender': 'M',
+                'gender_raw': 'Male',
+                'name_probability': 1.0,
+                'is_ambiguous': False,
+                'ambiguity_reason': 'unambiguous_italian_male_in_it',
+                'method': 'name_based',
+            }
+        else:
+            return {
+                'gender': None,
+                'gender_raw': 'Unknown',
+                'name_probability': 0.5,
+                'is_ambiguous': True,
+                'ambiguity_reason': f'cross_cultural_italian_name_{fn_lower}_outside_it',
+                'method': 'name_based',
+            }
+
+    # Check Curated Cross-Cultural / Ambiguous Names from paper (e.g., Dominique, Claude, Camille, Robin)
+    if fn_lower in CURATED_CROSS_CULTURAL_NAMES:
+        return {
+            'gender': None,
+            'gender_raw': 'Unknown',
+            'name_probability': 0.5,
+            'is_ambiguous': True,
+            'ambiguity_reason': f'curated_cross_cultural_name_{fn_lower}',
+            'method': 'name_based',
+        }
+
     # Get global probability from global-gender-predictor
     result_gender, weight = _predictor.predict_gender_probability(fn)
 
     # Use gender-guesser to determine if the name is strictly cross-cultural worldwide
-    # A name is cross-cultural if it has both a male and female context in the WGND dataset.
     name_cap = fn_lower.capitalize()
     gg_record = _gg_detector.names.get(name_cap)
     
@@ -114,26 +156,26 @@ def classify_name(
             mapped_country = ISO_TO_GENDER_GUESSER.get(country_code.upper())
             
         if not mapped_country:
-            # Cross-cultural name but country is unknown or unsupported
             is_ambiguous = True
             reason = f'cross_cultural_name_{fn_lower}_country_unknown'
         else:
-            # We know the country, let's ask gender-guesser for this specific country
             local_gender = _gg_detector.get_gender(name_cap, mapped_country)
             if local_gender in ['male', 'female']:
-                result_gender = 'Male' if local_gender == 'male' else 'Female'
-                weight = 1.0  # We are confident for this specific country
+                global_mapped = 'Male' if local_gender == 'male' else 'Female'
+                if result_gender in ['Male', 'Female'] and global_mapped != result_gender:
+                    is_ambiguous = True
+                    reason = f'cross_cultural_conflict_{fn_lower}_in_{mapped_country}_vs_global_{result_gender}'
+                else:
+                    result_gender = global_mapped
+                    weight = 1.0
             else:
-                # Still ambiguous even in this country (e.g., 'mostly_male', 'unknown', 'andy')
                 is_ambiguous = True
                 reason = f'cross_cultural_name_{fn_lower}_ambiguous_in_{mapped_country}'
     else:
-        # Not cross-cultural globally, rely on the global probability threshold
         if result_gender == 'Unknown' or weight < threshold:
             is_ambiguous = True
             reason = f'{result_gender}_low_probability_{weight:.2f}'
 
-    # Map result to M/F/None
     gender = None
     if not is_ambiguous:
         if result_gender == 'Male':
@@ -154,3 +196,4 @@ def classify_name(
         'ambiguity_reason': reason,
         'method': 'name_based',
     }
+

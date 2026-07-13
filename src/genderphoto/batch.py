@@ -21,6 +21,7 @@ from genderphoto.constants import (
     DEFAULT_VLM,
     OLLAMA_URL,
     DEFAULT_SEARCH_ENGINE,
+    DEFAULT_DETECTOR_BACKEND,
 )
 from genderphoto.pipeline import classify_inventor
 from genderphoto.utils import extract_first_name
@@ -46,8 +47,9 @@ def classify_batch(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
-    detector_backend: str = 'ssd',
+    detector_backend: str = DEFAULT_DETECTOR_BACKEND,
 ) -> pd.DataFrame:
+
     """
     Process a DataFrame of inventors, adding gender classification columns.
 

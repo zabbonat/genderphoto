@@ -19,7 +19,11 @@ ISO_TO_GENDER_GUESSER = {
 # DeepFace confidence threshold for accepting consensus without VLM
 DEEPFACE_HIGH_CONF = 90.0
 
+# Default face detector backend for DeepFace
+DEFAULT_DETECTOR_BACKEND = 'retinaface'
+
 # Ollama API endpoint (local, no cloud)
+
 OLLAMA_URL = 'http://localhost:11434/api/generate'
 
 # Default vision-language model

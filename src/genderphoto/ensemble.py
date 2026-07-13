@@ -18,7 +18,7 @@ import logging
 import numpy as np
 from PIL import Image
 
-from genderphoto.constants import DEEPFACE_HIGH_CONF, DEFAULT_VLM, OLLAMA_URL
+from genderphoto.constants import DEEPFACE_HIGH_CONF, DEFAULT_VLM, OLLAMA_URL, DEFAULT_DETECTOR_BACKEND
 from genderphoto.face_classifier import classify_face
 from genderphoto.utils import load_image
 from genderphoto.vlm_classifier import classify_vlm
@@ -33,8 +33,9 @@ def run_ensemble(
     max_images: int = 5,
     vlm_model: str = DEFAULT_VLM,
     ollama_url: str = OLLAMA_URL,
-    detector_backend: str = 'ssd',
+    detector_backend: str = DEFAULT_DETECTOR_BACKEND,
 ) -> tuple[dict, int, Image.Image | None]:
+
     """
     Run the ensemble classifier on a set of photos.
 

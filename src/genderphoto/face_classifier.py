@@ -11,11 +11,12 @@ import logging
 
 import numpy as np
 from PIL import Image
+from genderphoto.constants import DEFAULT_DETECTOR_BACKEND
 
 log = logging.getLogger(__name__)
 
 
-def classify_face(img: Image.Image, detector_backend: str = 'ssd') -> dict:
+def classify_face(img: Image.Image, detector_backend: str = DEFAULT_DETECTOR_BACKEND) -> dict:
     """
     Classify gender from a single face image using DeepFace.
 
@@ -24,7 +25,8 @@ def classify_face(img: Image.Image, detector_backend: str = 'ssd') -> dict:
     img : PIL.Image.Image
         RGB image to analyze.
     detector_backend : str
-        Face detector backend ('retinaface', 'opencv', 'ssd', 'mtcnn', etc.).
+        Face detector backend (default 'retinaface').
+
 
     Returns
     -------

@@ -12,8 +12,10 @@ from pathlib import Path
 
 import requests
 from PIL import Image
+import pandas as pd
 
 log = logging.getLogger(__name__)
+
 
 
 def setup_logging(
@@ -131,17 +133,28 @@ def is_asian_name(full_name: str) -> bool:
     return any(p in ASIAN_SURNAMES for p in parts)
 
 
-def compute_partial_identification_bounds(df, gender_col: str = 'gender_final') -> dict:
+def compute_partial_identification_bounds(
+    df, 
+    gender_col: str = 'gender_final',
+    method_col: str = 'gender_method',
+    country_col: str = 'country_code'
+) -> dict:
     """
     Compute partial-identification bounds (Manski bounds, 1989) for the female share
-    in a classified population where some records may remain unclassified ('UNKNOWN' or None).
+    in a classified population where some records remain unclassified ('UNKNOWN' or None).
+    Also separates name-resolved vs photo-resolved shares and computes the country-matched
+    plausible scenario (imputing unknown records from country-specific female shares).
 
     Parameters
     ----------
     df : pd.DataFrame
         DataFrame containing classification results.
     gender_col : str
-        Column containing gender values ('M', 'F', 'UNKNOWN', None).
+        Column containing final gender values ('M', 'F', 'UNKNOWN', None).
+    method_col : str, optional
+        Column indicating resolution stage ('name_based', 'deepface_consensus', 'ensemble_vlm_override', etc.).
+    country_col : str, optional
+        Column containing ISO 2-letter country of residence codes.
 
     Returns
     -------
@@ -152,9 +165,12 @@ def compute_partial_identification_bounds(df, gender_col: str = 'gender_final') 
             'unknown_count': int,
             'female_count': int,
             'male_count': int,
-            'observed_female_share': float,  # % of F among classified
-            'lower_bound': float,            # % of F assuming all UNKNOWN are M
-            'upper_bound': float,            # % of F assuming all UNKNOWN are F
+            'observed_female_share': float,               # Overall % F among classified
+            'observed_female_share_name_resolved': float, # p_N (% F among name-resolved)
+            'observed_female_share_photo_resolved': float,# p_P (% F among photo-resolved)
+            'lower_bound': float,                         # % F assuming all UNKNOWN = M
+            'upper_bound': float,                         # % F assuming all UNKNOWN = F
+            'country_matched_share': float,               # Plausible scenario (% F imputed via country shares)
         }
     """
     total = len(df)
@@ -166,19 +182,66 @@ def compute_partial_identification_bounds(df, gender_col: str = 'gender_final') 
             'female_count': 0,
             'male_count': 0,
             'observed_female_share': 0.0,
+            'observed_female_share_name_resolved': 0.0,
+            'observed_female_share_photo_resolved': 0.0,
             'lower_bound': 0.0,
             'upper_bound': 0.0,
+            'country_matched_share': 0.0,
         }
 
     s = df[gender_col].astype(str).str.upper()
-    f_count = int((s == 'F').sum())
-    m_count = int((s == 'M').sum())
+    f_mask = (s == 'F')
+    m_mask = (s == 'M')
+    classified_mask = f_mask | m_mask
+    unknown_mask = ~classified_mask
+
+    f_count = int(f_mask.sum())
+    m_count = int(m_mask.sum())
     classified = f_count + m_count
     unknown = total - classified
 
     obs_share = round((f_count / classified * 100.0), 2) if classified > 0 else 0.0
     lower_bound = round((f_count / total * 100.0), 2)
     upper_bound = round(((f_count + unknown) / total * 100.0), 2)
+
+    # Separate p_N (name resolved) from p_P (photo/vlm resolved)
+    p_N = 0.0
+    p_P = 0.0
+    if method_col in df.columns:
+        methods = df[method_col].astype(str).str.lower()
+        name_mask = classified_mask & (methods == 'name_based')
+        photo_mask = classified_mask & (methods != 'name_based') & (methods != 'unknown') & (methods != 'none')
+        
+        name_classified = int(name_mask.sum())
+        name_f = int((name_mask & f_mask).sum())
+        p_N = round((name_f / name_classified * 100.0), 2) if name_classified > 0 else 0.0
+
+        photo_classified = int(photo_mask.sum())
+        photo_f = int((photo_mask & f_mask).sum())
+        p_P = round((photo_f / photo_classified * 100.0), 2) if photo_classified > 0 else 0.0
+
+    # Country-matched plausible scenario (impute unknowns using country-specific F shares among classified)
+    imputed_f_count = float(f_count)
+    if unknown > 0:
+        if country_col in df.columns:
+            # Calculate observed F share by country among classified
+            country_f_shares = {}
+            for country, group in df[classified_mask].groupby(country_col):
+                if pd.notna(country) and str(country).strip() != '':
+                    c_f = (group[gender_col].astype(str).str.upper() == 'F').sum()
+                    country_f_shares[str(country).upper()] = c_f / len(group)
+            
+            # Impute each unknown record
+            for _, row in df[unknown_mask].iterrows():
+                c = str(row.get(country_col, '')).upper()
+                if c in country_f_shares:
+                    imputed_f_count += country_f_shares[c]
+                else:
+                    imputed_f_count += (obs_share / 100.0)
+        else:
+            imputed_f_count += unknown * (obs_share / 100.0)
+
+    country_matched_share = round((imputed_f_count / total * 100.0), 2) if total > 0 else 0.0
 
     return {
         'total_population': total,
@@ -187,7 +250,11 @@ def compute_partial_identification_bounds(df, gender_col: str = 'gender_final') 
         'female_count': f_count,
         'male_count': m_count,
         'observed_female_share': obs_share,
+        'observed_female_share_name_resolved': p_N,
+        'observed_female_share_photo_resolved': p_P,
         'lower_bound': lower_bound,
         'upper_bound': upper_bound,
+        'country_matched_share': country_matched_share,
     }
+
 

@@ -17,6 +17,7 @@ from genderphoto.constants import (
     DEFAULT_VLM,
     OLLAMA_URL,
     DEFAULT_SEARCH_ENGINE,
+    DEFAULT_DETECTOR_BACKEND,
 )
 from genderphoto.ensemble import run_ensemble
 from genderphoto.name_classifier import classify_name
@@ -39,8 +40,9 @@ def classify_inventor(
     verbose: bool = False,
     name_threshold: float = None,
     search_engine: str = DEFAULT_SEARCH_ENGINE,
-    detector_backend: str = 'ssd',
+    detector_backend: str = DEFAULT_DETECTOR_BACKEND,
 ) -> dict:
+
     """
     Full classification pipeline for a single inventor.
 
