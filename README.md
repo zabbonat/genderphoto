@@ -1,10 +1,10 @@
-# genderphoto
+# genderphoto — *Andrea Is a Man*
 
 Gender classification of patent inventors (or any person) from their name, publicly available photos, and — when needed — a local vision-language model.
 
-The package was developed for bibliometric research on inventor gender gaps, where relying on names alone fails systematically: "Andrea" is male in Italy and female in the US, most East-Asian given names are unisex to name classifiers, and so on. Rather than discarding these cases, `genderphoto` downloads photos via Bing, runs DeepFace on every image it finds, and calls a local VLM through Ollama when DeepFace results disagree or are uncertain.
+The package was developed for bibliometric research on inventor gender gaps, where relying on names alone fails systematically. The name **Andrea** exemplifies the core problem: it is unambiguously male in Italy, but classified as female in Germany, Austria, Spain, and most English-speaking countries by standard name-based tools (e.g., `gender-guesser`, WGND 2.0). An Italian physicist working at Max Planck in Hamburg would be silently misclassified as a woman — with 96% confidence — by any conventional name-gender pipeline that trusts the local convention of the country of residence. The same problem affects Simone (male in Italy, female in France), Nicola (male in Italy, female in the UK), Dominique (male in France, female in the US), and hundreds of East-Asian given names that are unisex to name classifiers.
 
-No data ever leaves your machine — the VLM runs entirely on localhost.
+Rather than discarding these ambiguous cases, `genderphoto` flags them and downloads publicly available photos, runs DeepFace on every image it finds, and calls a local VLM through Ollama when DeepFace results disagree or are uncertain. **No data ever leaves your machine** — the VLM runs entirely on localhost.
 
 ## Installation
 
@@ -38,7 +38,8 @@ result = classify_inventor(
     country_code="DE",
 )
 print(result['gender'], result['method'], result['confidence'])
-# M  deepface_consensus  98.5
+# → M  deepface_consensus  98.5
+# Andrea in DE is cross-cultural → flagged ambiguous → resolved via photo
 ```
 
 ### Classify a batch from a DataFrame
@@ -62,9 +63,12 @@ print(result_df[['inventor_name', 'gender_final', 'gender_method']])
 ```python
 from genderphoto import classify_name
 
-classify_name("Andrea", "IT")   # → {'gender': 'M', 'is_ambiguous': False, ...}
-classify_name("Andrea", "US")   # → {'gender': None, 'is_ambiguous': True, ...}
-classify_name("Wei", "CN")      # → {'gender': None, 'is_ambiguous': True, ...}
+classify_name("Andrea", "IT")   # → {'gender': 'M', 'is_ambiguous': False}   Andrea is a man in Italy
+classify_name("Andrea", "DE")   # → {'gender': None, 'is_ambiguous': True}   ambiguous outside Italy → photo
+classify_name("Andrea", None)   # → {'gender': None, 'is_ambiguous': True}   unknown country → photo
+classify_name("Wei", "CN")      # → {'gender': None, 'is_ambiguous': True}   East Asian → photo
+classify_name("Dominique", "FR") # → {'gender': None, 'is_ambiguous': True}  curated cross-cultural → photo
+classify_name("Jennifer", "US") # → {'gender': 'F', 'is_ambiguous': False}   unambiguous
 ```
 
 ---
@@ -73,13 +77,31 @@ classify_name("Wei", "CN")      # → {'gender': None, 'is_ambiguous': True, ...
 
 Each inventor goes through up to four stages. The pipeline stops as soon as one stage produces a confident result.
 
-1. **Name-based screening & Cross-cultural conflict filter** — Uses `global-gender-predictor` (backed by WIPO WGND 2.0 with 4.1M names) combined with a dedicated Pinyin dictionary for unambiguous Chinese given names. Crucially, it incorporates a **cross-cultural conflict filter** (`gender-guesser`): when a name has conflicting gender identities globally (e.g., "Andrea" is male in Italy but female in English- and German-speaking countries), the pipeline checks the `country_code` parameter, which corresponds to the **inventor's country of residence** (from patent address metadata). If the name probability is below `name_threshold` (default 0.75) or exhibits an unresolved cross-cultural conflict outside the native residence country, it is flagged as `is_ambiguous = True` and routed to photo analysis. Note: `country_code` must be the inventor's country of residence, while institutional `affiliation` is reserved exclusively for Stage 2.
+### Stage 1: Name-based screening & Cross-cultural conflict filter
 
-2. **Photo search** — For ambiguous names, image search downloads up to `max_images` photos. Passing `search_engine="auto"` enables a cascading search engine fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. The search tries three queries in order: `"{name} {affiliation}"`, `"{name} researcher"`, and `"{name}"`, using the **inventor's institutional affiliation** (`affiliation`) to resolve homonyms and ensure high precision.
+Uses `global-gender-predictor` (backed by WIPO WGND 2.0 with 4.1M names) combined with a dedicated Pinyin dictionary for Chinese given names. Crucially, it incorporates a **cross-cultural conflict filter** using `gender-guesser` to prevent silent misclassifications on names whose gender meaning changes across countries.
 
-3. **DeepFace consensus** — DeepFace (`retinaface` backend, `enforce_detection=True`) analyzes every downloaded photo. If all detected faces across all valid images agree on the same gender with an average confidence ≥ 90%, the consensus result is accepted (`deepface_consensus`) without calling the VLM.
+The filter operates through three mechanisms:
 
-4. **VLM tiebreaker / override** — When localized facial attribute analysis (`DeepFace`) produces conflicting results across images or yields uncertain confidence (< 90%), the best-quality image is passed to a local Vision-Language Model (`Qwen2.5-VL` via Ollama). Acting as an algorithmic **tiebreaker**, the VLM interprets the photograph holistically (evaluating attire, presentation, and context rather than localized facial geometry alone). If the VLM agrees with the DeepFace majority, the result is confirmed with 92% confidence (`ensemble_vlm_majority_agree`). If the VLM disagrees, its assessment overrides DeepFace (`ensemble_vlm_override` with 95% confidence), mitigating well-documented algorithmic biases of face detectors against East Asian women.
+1. **Italian male name override** — A curated set of names that are unambiguously male in Italy but female or ambiguous elsewhere (Andrea, Simone, Nicola, Gabriele, Michele, Daniele, Raffaele, Samuele, Emanuele, Pasquale, Luca, Mattia). When `country_code="IT"`, these are classified as **male with probability 1.0** without photo verification. For **any other country** (or missing country code), they are flagged as `is_ambiguous=True` and routed to photo analysis. This is the "Andrea is a man" rule: an Andrea residing in Italy is classified as male; an Andrea residing in Germany, the US, or with unknown country is treated as ambiguous and verified via photo.
+
+2. **Curated cross-cultural names** — Names like Dominique, Claude, Camille, Robin, Kim, and others that carry opposite gender connotations in different cultures are **always flagged as ambiguous** regardless of country, bypassing any probabilistic score.
+
+3. **Low-probability threshold** — Any name with a probability score below `name_threshold` (default 0.75) is flagged as ambiguous.
+
+The `country_code` parameter must be the **inventor's country of residence** (from patent address metadata), while institutional `affiliation` is reserved exclusively for Stage 2 (photo search).
+
+### Stage 2: Photo search
+
+For ambiguous names, image search downloads up to `max_images` photos. The default `search_engine="auto"` enables a cascading fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. When an affiliation is provided, the search queries `"{name} {affiliation}"`; otherwise it falls back to `"{name} researcher"` and then `"{name}"`. The **inventor's institutional affiliation** (`affiliation`) helps resolve homonyms and ensure high precision.
+
+### Stage 3: DeepFace consensus
+
+DeepFace (`retinaface` backend, `enforce_detection=True`) analyzes every downloaded photo. If all detected faces across all valid images agree on the same gender with an average confidence ≥ 90%, the consensus result is accepted (`deepface_consensus`) without calling the VLM.
+
+### Stage 4: VLM tiebreaker / override
+
+When DeepFace produces conflicting results across images or yields uncertain confidence (< 90%), the best-quality image is passed to a local Vision-Language Model (`Qwen2.5-VL` via Ollama). Acting as an algorithmic **tiebreaker**, the VLM interprets the photograph holistically (evaluating attire, presentation, and context rather than localized facial geometry alone). If the VLM agrees with the DeepFace majority, the result is confirmed with 92% confidence (`ensemble_vlm_majority_agree`). If the VLM disagrees, its assessment overrides DeepFace (`ensemble_vlm_override` with 95% confidence), mitigating well-documented algorithmic biases of face detectors against East Asian women.
 
 
 ---
@@ -95,11 +117,11 @@ result = classify_inventor(
     name="Andrea Cavalleri",          # full name (required)
     affiliation="Max Planck Hamburg",  # improves photo search quality
     country_code="DE",                # ISO 2-letter code, for cross-cultural name checks
-    max_images=5,                     # photos to download per inventor (default: 5)
+    max_images=3,                     # photos to download per inventor (default: 3)
     confidence_threshold=75.0,        # minimum confidence % to accept (default: 75.0)
     save_photo_flag=False,            # save the best photo to disk (default: False)
     photo_dir="./inventor_photos",    # where to save photos
-    search_engine="bing",             # 'bing' or 'duckduckgo' (default: 'bing')
+    search_engine="auto",             # 'auto', 'bing', 'duckduckgo', or 'baidu' (default: 'auto')
     detector_backend="retinaface",    # face detector engine (default: 'retinaface')
     vlm_model="qwen2.5vl:7b",        # any Ollama vision model (see below)
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
@@ -137,12 +159,12 @@ result_df = classify_batch(
     name_col="inventor_name",          # column with full names (default: 'inventor_name')
     affiliation_col="affiliation",     # column with affiliations (default: 'affiliation')
     country_col="country_code",        # column with ISO country codes (default: 'country_code')
-    max_images=5,                      # photos per inventor (default: 5)
+    max_images=3,                      # photos per inventor (default: 3)
     confidence_threshold=75.0,         # min confidence % (default: 75.0)
-    sleep=2.5,                         # seconds between inventors, for rate limiting (default: 2.5)
+    sleep=0.5,                         # seconds between inventors, for rate limiting (default: 0.5)
     save_photos=True,                  # save best photos to disk (default: True)
     photo_dir="./inventor_photos",     # photo output directory
-    search_engine="bing",              # 'bing' or 'duckduckgo'
+    search_engine="auto",              # 'auto', 'bing', 'duckduckgo', or 'baidu' (default: 'auto')
     detector_backend="retinaface",     # face detector engine (default: 'retinaface')
     vlm_model="qwen2.5vl:7b",         # Ollama vision model
     ollama_url="http://localhost:11434/api/generate",  # Ollama endpoint
@@ -341,7 +363,7 @@ The full validation dataset is in `tests/test_validation_100.py`.
 
 ## Dependencies
 
-Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `icrawler`, `global-gender-predictor`, `ddgs`, `tqdm`.
+Core: `pandas`, `numpy`, `Pillow`, `requests`, `deepface`, `retina-face`, `tf-keras`, `icrawler`, `global-gender-predictor`, `gender-guesser`, `ddgs`, `tqdm`.
 
 (The VLM fallback connects to the local Ollama API via HTTP requests, so no additional Python packages are required, only the Ollama application itself).
 
@@ -352,7 +374,7 @@ If you use this software, please cite it:
 ```bibtex
 @software{genderphoto,
   author = {Abbonato, Diletta and Maronero, Cecilia},
-  title  = {genderphoto: Andrea Is a Woman?},
+  title  = {genderphoto: Andrea Is a Man},
   year   = {2025},
   url    = {https://github.com/zabbonat/genderphoto}
 }
