@@ -375,7 +375,7 @@ If you use this software, please cite it:
 @software{genderphoto,
   author = {Abbonato, Diletta and Maronero, Cecilia},
   title  = {genderphoto: Andrea Is a Man},
-  year   = {2025},
+  year   = {2026},
   url    = {https://github.com/zabbonat/genderphoto}
 }
 ```
