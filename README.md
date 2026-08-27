@@ -97,7 +97,7 @@ Before downloading photos, the pipeline queries DuckDuckGo for the inventor's na
 
 ### Stage 3: Photo search
 
-For unresolved ambiguous names, image search downloads up to `max_images` photos. The default `search_engine="auto"` enables a cascading fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. When an affiliation is provided, the search queries `"{name} {affiliation}"`; otherwise it falls back to `"{name} researcher"` and then `"{name}"`. The **inventor's institutional affiliation** (`affiliation`) helps resolve homonyms and ensure high precision.
+For unresolved ambiguous names, image search downloads up to `max_images` photos. The default `search_engine="auto"` enables a cascading fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. When an affiliation is provided, the search queries `"{name} {affiliation}"` and falls back to `"{name} linkedin"`. Otherwise, it attempts `"{name} linkedin"`, then falls back to `"{name} researcher"` and finally `"{name}"`. The **inventor's institutional affiliation** (`affiliation`) helps resolve homonyms and ensure high precision.
 
 ### Stage 4: DeepFace consensus
 
