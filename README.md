@@ -91,15 +91,19 @@ The filter operates through three mechanisms:
 
 The `country_code` parameter must be the **inventor's country of residence** (from patent address metadata), while institutional `affiliation` is reserved exclusively for Stage 2 (photo search).
 
-### Stage 2: Photo search
+### Stage 2: Web search for pronouns
 
-For ambiguous names, image search downloads up to `max_images` photos. The default `search_engine="auto"` enables a cascading fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. When an affiliation is provided, the search queries `"{name} {affiliation}"`; otherwise it falls back to `"{name} researcher"` and then `"{name}"`. The **inventor's institutional affiliation** (`affiliation`) helps resolve homonyms and ensure high precision.
+Before downloading photos, the pipeline queries DuckDuckGo for the inventor's name (and affiliation, if provided, alongside relevant keywords like "LinkedIn" or "biography"). It reads the search result snippets without crawling the actual pages to avoid bot detection. By counting the occurrences of masculine (`he`, `his`, `him`) versus feminine (`she`, `her`, `hers`) pronouns in the text snippets, it can often determine the gender without needing to download and process photos (`web_search_pronouns`). If the search is inconclusive (e.g., no clear pronoun majority), the pipeline proceeds to photo search.
 
-### Stage 3: DeepFace consensus
+### Stage 3: Photo search
+
+For unresolved ambiguous names, image search downloads up to `max_images` photos. The default `search_engine="auto"` enables a cascading fallback (`bing` → `duckduckgo`, plus `baidu` for East Asian names) to maximize retrieval rates. When an affiliation is provided, the search queries `"{name} {affiliation}"`; otherwise it falls back to `"{name} researcher"` and then `"{name}"`. The **inventor's institutional affiliation** (`affiliation`) helps resolve homonyms and ensure high precision.
+
+### Stage 4: DeepFace consensus
 
 DeepFace (`retinaface` backend, `enforce_detection=True`) analyzes every downloaded photo. If all detected faces across all valid images agree on the same gender with an average confidence ≥ 90%, the consensus result is accepted (`deepface_consensus`) without calling the VLM.
 
-### Stage 4: VLM tiebreaker / override
+### Stage 5: VLM tiebreaker / override
 
 When DeepFace produces conflicting results across images or yields uncertain confidence (< 90%), the best-quality image is passed to a local Vision-Language Model (`Qwen2.5-VL` via Ollama). Acting as an algorithmic **tiebreaker**, the VLM interprets the photograph holistically (evaluating attire, presentation, and context rather than localized facial geometry alone). If the VLM agrees with the DeepFace majority, the result is confirmed with 92% confidence (`ensemble_vlm_majority_agree`). If the VLM disagrees, its assessment overrides DeepFace (`ensemble_vlm_override` with 95% confidence), mitigating well-documented algorithmic biases of face detectors against East Asian women.
 
