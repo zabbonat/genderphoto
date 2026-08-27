@@ -34,6 +34,7 @@ dependencies = [
     "ddgs>=9.8.0",
     "tqdm>=4.60",
     "gender-guesser>=0.4.0",
+    "duckduckgo-search>=5.3.1",
 ]
 
 [project.optional-dependencies]

@@ -128,8 +128,26 @@ def classify_inventor(
             )
             return base
 
-        # Stage 2: photo-based classification
-        log.info("%s -> ambiguous (%s), searching photos...", name, name_result['ambiguity_reason'])
+        # Stage 2: Web Search for Pronouns (Fallback for ambiguous names before fetching photos)
+        log.info("%s -> ambiguous (%s), trying web search for pronouns...", name, name_result['ambiguity_reason'])
+        
+        from genderphoto.web_search import classify_by_pronouns
+        web_result = classify_by_pronouns(name, affiliation)
+        
+        if web_result['gender'] != 'UNKNOWN':
+            base['gender'] = web_result['gender']
+            base['method'] = web_result['method']
+            # Optional: add info about counts if needed, but not in base schema
+            log.info(
+                "  -> %s (web_search_pronouns, M:%d F:%d)",
+                web_result['gender'], web_result['m_count'], web_result['f_count']
+            )
+            return base
+        else:
+            log.info("  Web search inconclusive (M:%d F:%d), proceeding to photo search...", web_result['m_count'], web_result['f_count'])
+
+        # Stage 3: photo-based classification
+        log.info("%s -> searching photos...", name)
 
         is_auto = search_engine == 'auto'
         
